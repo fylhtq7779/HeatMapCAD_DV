@@ -7,6 +7,7 @@ from tkinter import ttk, messagebox, filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from mouse_tracker import MouseTracker
 from heatmap import Heatmap
+import ttkbootstrap as ttkb
 import numpy as np
 import os
 import json
@@ -24,7 +25,7 @@ class MouseTrackerApp:
         self.setup_ui()
 
     def setup_ui(self):
-        style = ttk.Style("superhero")
+        style = ttkb.Style("superhero")
 
         self.main_frame = ttk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=1)
