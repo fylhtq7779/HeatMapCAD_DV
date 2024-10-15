@@ -17,10 +17,11 @@ class MouseTrackerApp:
         self.root = root
         self.root.title("Тепловая карта движений мыши")
         self.root.geometry("1200x800")
+        self.root.minsize(width=1200, height=800)  # Установить минимальный размер окна
 
         self.positions = []
         self.listener = None
-        self.color_map = 'hot'  # Начальная цветовая карта
+        self.color_map = 'hot'
         self.img = None
         self.screen_resolution = None
 
@@ -32,19 +33,25 @@ class MouseTrackerApp:
         self.main_frame = ttkb.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=1)
 
-        self.fig, self.ax = plt.subplots(figsize=(10, 8))
+        # Создаем фигуру и ось для графика
+        self.fig, self.ax = plt.subplots(figsize=(8, 8))
         self.ax.axis('off')
 
+        # Устанавливаем канву для matplotlib
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.main_frame)
         self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
+        # Создаем фрейм для настроек
         settings_frame = ttkb.Frame(self.main_frame, width=250, padding=10)
         settings_frame.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Настройка виджета канвы, чтобы он занял оставшееся пространство
+        self.canvas_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
         button_style = {'bootstyle': 'primary', 'padding': 10}
         slider_style = {'bootstyle': 'success', 'orient': tk.HORIZONTAL}
 
+        # Добавляем кнопки в фрейм с настройками
         ttkb.Button(settings_frame, text="Начать отслеживание", command=self.start_tracking, **button_style).pack(
             anchor=tk.N, fill=tk.X, pady=10)
         ttkb.Button(settings_frame, text="Завершить отслеживание", command=self.stop_tracking, **button_style).pack(
@@ -54,6 +61,7 @@ class MouseTrackerApp:
         ttkb.Button(settings_frame, text="Загрузить изображение", command=self.load_image, **button_style).pack(
             anchor=tk.N, fill=tk.X, pady=10)
 
+        # Добавляем слайдеры и метки для них
         ttkb.Label(settings_frame, text="Разрешение", font=("Arial", 10)).pack(anchor=tk.N)
         self.slider_resolution = ttkb.Scale(settings_frame, from_=10, to=500, **slider_style)
         self.slider_resolution.set(100)
@@ -74,6 +82,7 @@ class MouseTrackerApp:
         self.slider_sensitivity.set(1.0)
         self.slider_sensitivity.pack(anchor=tk.N, fill=tk.X, pady=10)
 
+        # Добавляем возможность выбора цветовой карты
         cmap_label = ttkb.Label(settings_frame, text="Цветовая карта", font=("Arial", 10))
         cmap_label.pack(anchor=tk.N)
 
@@ -83,9 +92,11 @@ class MouseTrackerApp:
         self.cmap_combobox.pack(anchor=tk.N, fill=tk.X, pady=10)
         self.cmap_combobox.bind("<<ComboboxSelected>>", self.change_color_map)
 
+        # Кнопка для сохранения тепловой карты
         ttkb.Button(settings_frame, text="Сохранить тепловую карту", command=self.save_heatmap, **button_style).pack(
             anchor=tk.S, fill=tk.X, pady=20)
 
+        # Привязка изменений слайдеров к обновлению тепловой карты
         self.slider_resolution.bind("<ButtonRelease-1>", lambda event: self.update_heatmap())
         self.slider_brightness.bind("<ButtonRelease-1>", lambda event: self.update_heatmap())
         self.slider_size.bind("<ButtonRelease-1>", lambda event: self.update_heatmap())
@@ -96,18 +107,26 @@ class MouseTrackerApp:
         self.update_heatmap()
 
     def start_tracking(self):
-        delay_seconds = 5
-        messagebox.showinfo("Информация",
-                            f"У вас есть {delay_seconds} секунд, чтобы свернуть окна и подготовить экран для скриншота...")
-        time.sleep(delay_seconds)
+        delay_seconds = 5  # секунды ожидания
 
-        screenshot = pyautogui.screenshot()
-        self.img = np.array(screenshot)
-        self.screen_resolution = (self.img.shape[1], self.img.shape[0])  # ширина, высота
+        # Функция, которая будет выполнена после ожидания
+        def start_after_delay():
+            screenshot = pyautogui.screenshot()
+            self.img = np.array(screenshot)
+            self.screen_resolution = (self.img.shape[1], self.img.shape[0])  # ширина, высота
 
-        self.positions.clear()
-        self.listener = mouse.Listener(on_move=self.on_move)
-        self.listener.start()
+            self.positions.clear()
+            self.listener = mouse.Listener(on_move=self.on_move)
+            self.listener.start()
+
+        # Показать сообщение и сделать так, чтобы ожидание началось после закрытия messagebox
+        msg_box = messagebox.showinfo(
+            "Информация",
+            f"У вас есть {delay_seconds} секунд, чтобы свернуть окна и подготовить экран для скриншота..."
+        )
+
+        # Используем `after` для ожидания перед выполнением скриншота
+        self.root.after(delay_seconds * 1000, start_after_delay)
 
     def on_move(self, x, y):
         self.positions.append((x, y))
@@ -201,3 +220,4 @@ if __name__ == "__main__":
     root = ttkb.Window()
     app = MouseTrackerApp(root)
     root.mainloop()
+
