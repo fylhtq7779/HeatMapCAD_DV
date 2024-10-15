@@ -9,6 +9,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import time
 import json
 import os
+import sys  # Импортируем sys для использования os._exit
 import ttkbootstrap as ttkb
 
 
@@ -28,6 +29,8 @@ class MouseTrackerApp:
 
         if not os.path.exists(self.tracks_directory):
             os.makedirs(self.tracks_directory)
+
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.setup_ui()
         self.update_tracks_combobox()
@@ -131,6 +134,7 @@ class MouseTrackerApp:
     def stop_tracking(self):
         if self.listener:
             self.listener.stop()
+            self.listener.join()
             self.listener = None
             self.update_heatmap()
             filename = self.save_positions()
@@ -146,7 +150,6 @@ class MouseTrackerApp:
                 },
                 'positions': self.positions
             }
-            # Форматирование имени файла с текущей датой и временем (без секунд)
             current_time = time.strftime("%Y-%m-%d_%H-%M")
             filename = os.path.join(self.tracks_directory, f"track_{current_time}.json")
             with open(filename, 'w') as f:
@@ -221,6 +224,11 @@ class MouseTrackerApp:
         if filepath:
             self.fig.savefig(filepath, dpi=300)
             messagebox.showinfo("Информация", f"Тепловая карта сохранена в: {filepath}")
+
+    def on_close(self):
+        self.stop_tracking()
+        self.root.destroy()
+        os._exit(0)  # Принудительное завершение всех процессов
 
 
 if __name__ == "__main__":
