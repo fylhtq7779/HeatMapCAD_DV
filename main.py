@@ -19,6 +19,7 @@ class MouseTrackerApp:
         self.root.geometry("1200x800")
         self.root.minsize(width=1200, height=800)  # Установить минимальный размер окна
 
+        self.filter_stationary = tk.BooleanVar(value=False)  # Переменная для чекбокса
         self.positions = []
         self.listener = None
         self.color_map = 'hot'
@@ -91,6 +92,12 @@ class MouseTrackerApp:
         self.cmap_combobox.set(self.color_map)
         self.cmap_combobox.pack(anchor=tk.N, fill=tk.X, pady=10)
         self.cmap_combobox.bind("<<ComboboxSelected>>", self.change_color_map)
+
+        self.filter_checkbox = ttkb.Checkbutton(
+            self.main_frame, text="Фильтровать неподвижные координаты",
+            variable=self.filter_stationary
+        )
+        self.filter_checkbox.pack(anchor=tk.N, fill=tk.X, pady=10)
 
         # Кнопка для сохранения тепловой карты
         ttkb.Button(settings_frame, text="Сохранить тепловую карту", command=self.save_heatmap, **button_style).pack(
@@ -206,6 +213,11 @@ class MouseTrackerApp:
             x, y = zip(*self.positions)
             x = np.array(x)
             y = np.array(y)
+
+            # Применяем фильтрацию, если чекбокс активен
+            if self.filter_stationary.get():
+                x, y = self.filter_positions(x, y)
+
             self.create_heatmap(resolution, brightness, size_factor, sensitivity, self.img, x, y)
 
     def save_heatmap(self):
@@ -214,6 +226,17 @@ class MouseTrackerApp:
         if filepath:
             self.fig.savefig(filepath, dpi=300)
             messagebox.showinfo("Информация", f"Тепловая карта сохранена в: {filepath}")
+            
+    def filter_positions(self, x, y):
+        filtered_x = [x[0]]
+        filtered_y = [y[0]]
+
+        for i in range(1, len(x)):
+            if x[i] != x[i-1] or y[i] != y[i-1]:
+                filtered_x.append(x[i])
+                filtered_y.append(y[i])
+
+        return np.array(filtered_x), np.array(filtered_y)
 
 
 if __name__ == "__main__":
