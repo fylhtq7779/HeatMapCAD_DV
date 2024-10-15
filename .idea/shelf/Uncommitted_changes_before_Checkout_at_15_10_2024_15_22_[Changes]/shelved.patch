@@ -1,0 +1,87 @@
+Index: mouse_tracker.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>\"\"\"\r\nResponsible for tracking mouse movements.\r\n\"\"\"\r\n\r\nimport pyautogui\r\nfrom pynput import mouse\r\nimport numpy as np\r\nimport json\r\nimport os\r\n\r\nclass MouseTracker:\r\n    def __init__(self):\r\n        self.positions = []\r\n        self.listener = None\r\n        self.screen_resolution = None\r\n\r\n    def start_tracking(self, root):\r\n        delay_seconds = 5\r\n        messagebox.showinfo(\"Информация\",\r\n                            f\"У вас есть {delay_seconds} секунд, чтобы свернуть окна и подготовить экран для скриншота...\")\r\n        root.after(delay_seconds * 1000, self._start_tracking)\r\n\r\n    def _start_tracking(self):\r\n        screenshot = pyautogui.screenshot()\r\n        self.screen_resolution = screenshot.size\r\n        self.positions.clear()\r\n        self.listener = mouse.Listener(on_move=self.on_move)\r\n        self.listener.start()\r\n\r\n    def on_move(self, x, y):\r\n        self.positions.append((x, y))\r\n\r\n    def stop_tracking(self):\r\n        if self.listener:\r\n            self.listener.stop()\r\n            self.listener = None\r\n\r\n    def save_positions(self):\r\n        if self.positions and self.screen_resolution:\r\n            data = {\r\n                'resolution': {\r\n                    'width': self.screen_resolution[0],\r\n                    'height': self.screen_resolution[1]\r\n                },\r\n                'positions': self.positions\r\n            }\r\n            filename = os.path.join(os.getcwd(), \"mouse_movements.json\")\r\n            with open(filename, 'w') as f:\r\n                json.dump(data, f)\r\n            messagebox.showinfo(\"Информация\", f\"Движения мыши сохранены в: {filename}\")\r\n\r\n    def load_positions(self, filepath):\r\n        if filepath:\r\n            with open(filepath, 'r') as f:\r\n                data = json.load(f)\r\n            self.positions = data['positions']\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/mouse_tracker.py b/mouse_tracker.py
+--- a/mouse_tracker.py	(revision 1587f0e5b5a10cbffc979115c8916d8d29a13527)
++++ b/mouse_tracker.py	(date 1728994832247)
+@@ -7,6 +7,7 @@
+ import numpy as np
+ import json
+ import os
++from tkinter import messagebox  # Убедитесь, что этот импорт добавлен
+ 
+ class MouseTracker:
+     def __init__(self):
+Index: mouse_movements.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/mouse_movements.json b/mouse_movements.json
+new file mode 100644
+--- /dev/null	(date 1728994843049)
++++ b/mouse_movements.json	(date 1728994843049)
+@@ -0,0 +1,1 @@
++{"resolution": {"width": 1920, "height": 1080}, "positions": [[1341, 724], [1319, 755], [1293, 789], [1268, 830], [1248, 869], [1233, 907], [1221, 942], [1212, 970], [1206, 987], [1199, 998], [1196, 1007], [1191, 1013], [1189, 1019], [1187, 1021], [1186, 1022], [1185, 1023], [1184, 1024], [1184, 1024], [1184, 1025], [1184, 1026], [1184, 1027], [1184, 1030], [1185, 1033], [1187, 1039], [1189, 1045], [1190, 1050], [1191, 1054], [1191, 1057], [1191, 1058], [1191, 1059], [1191, 1061], [1191, 1061], [1191, 1062], [1191, 1063], [1194, 1018], [1204, 951], [1214, 875], [1226, 806], [1242, 719], [1260, 645], [1272, 572], [1284, 515], [1295, 468], [1303, 435], [1310, 408], [1315, 393], [1317, 382], [1319, 377], [1319, 375], [1319, 374], [1319, 374], [1319, 373], [1319, 373], [1319, 372], [1318, 372], [1317, 372], [1316, 371], [1315, 371], [1315, 371], [1314, 371], [1313, 370], [1313, 370], [1313, 369], [1312, 368], [1311, 366], [1310, 363], [1308, 358], [1304, 349], [1300, 339], [1296, 331], [1294, 326], [1292, 324], [1291, 321], [1291, 320], [1290, 319], [1289, 318], [1289, 317], [1289, 317], [1289, 317], [1289, 316], [1288, 315], [1288, 314], [1287, 314], [1287, 314], [1287, 315], [1287, 316], [1286, 316], [1286, 317], [1286, 317], [1286, 318], [1286, 318]]}
+\ No newline at end of file
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"604a5052-3cfa-4dd8-9934-5b270774798d\" name=\"Changes\" comment=\"first commit\" />\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"Python Script\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_BRANCH_BY_REPOSITORY\">\r\n      <map>\r\n        <entry key=\"$PROJECT_DIR$\" value=\"master\" />\r\n      </map>\r\n    </option>\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"MarkdownSettingsMigration\">\r\n    <option name=\"stateVersion\" value=\"1\" />\r\n  </component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 2\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"2nSyUHQEBvfX7R9Tn17xdvkTkfh\" />\r\n  <component name=\"ProjectLevelVcsManager\" settingsEditedManually=\"true\">\r\n    <ConfirmationsSetting value=\"2\" id=\"Add\" />\r\n  </component>\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\"><![CDATA[{\r\n  \"keyToString\": {\r\n    \"ASKED_ADD_EXTERNAL_FILES\": \"true\",\r\n    \"Python.main.executor\": \"Run\",\r\n    \"Python.ui.executor\": \"Run\",\r\n    \"RunOnceActivity.OpenProjectViewOnStart\": \"true\",\r\n    \"RunOnceActivity.ShowReadmeOnStart\": \"true\",\r\n    \"git-widget-placeholder\": \"test\",\r\n    \"settings.editor.selected.configurable\": \"vcs.Git\"\r\n  },\r\n  \"keyToStringList\": {\r\n    \"ChangesTree.GroupingKeys\": [\r\n      \"directory\"\r\n    ]\r\n  }\r\n}]]></component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-python-sdk-7a29c1521ef0-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.11799.298\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"604a5052-3cfa-4dd8-9934-5b270774798d\" name=\"Changes\" comment=\"\" />\r\n      <created>1728980785890</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1728980785890</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00001\" summary=\"first commit\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1728980994798</created>\r\n      <option name=\"number\" value=\"00001\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00001\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1728980994798</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00002\" summary=\"first commit\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1728981336671</created>\r\n      <option name=\"number\" value=\"00002\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00002\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1728981336671</updated>\r\n    </task>\r\n    <option name=\"localTasksCounter\" value=\"3\" />\r\n    <servers />\r\n  </component>\r\n  <component name=\"Vcs.Log.Tabs.Properties\">\r\n    <option name=\"TAB_STATES\">\r\n      <map>\r\n        <entry key=\"MAIN\">\r\n          <value>\r\n            <State>\r\n              <option name=\"FILTERS\">\r\n                <map>\r\n                  <entry key=\"branch\">\r\n                    <value>\r\n                      <list>\r\n                        <option value=\"master\" />\r\n                      </list>\r\n                    </value>\r\n                  </entry>\r\n                </map>\r\n              </option>\r\n            </State>\r\n          </value>\r\n        </entry>\r\n      </map>\r\n    </option>\r\n  </component>\r\n  <component name=\"VcsManagerConfiguration\">\r\n    <option name=\"ADD_EXTERNAL_FILES_SILENTLY\" value=\"true\" />\r\n    <MESSAGE value=\"first commit\" />\r\n    <option name=\"LAST_COMMIT_MESSAGE\" value=\"first commit\" />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 1587f0e5b5a10cbffc979115c8916d8d29a13527)
++++ b/.idea/workspace.xml	(date 1728994787834)
+@@ -4,7 +4,9 @@
+     <option name="autoReloadType" value="SELECTIVE" />
+   </component>
+   <component name="ChangeListManager">
+-    <list default="true" id="604a5052-3cfa-4dd8-9934-5b270774798d" name="Changes" comment="first commit" />
++    <list default="true" id="604a5052-3cfa-4dd8-9934-5b270774798d" name="Changes" comment="first commit">
++      <change afterPath="$PROJECT_DIR$/mouse_movements.json" afterDir="false" />
++    </list>
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+@@ -39,22 +41,22 @@
+     <option name="hideEmptyMiddlePackages" value="true" />
+     <option name="showLibraryContents" value="true" />
+   </component>
+-  <component name="PropertiesComponent"><![CDATA[{
+-  "keyToString": {
+-    "ASKED_ADD_EXTERNAL_FILES": "true",
+-    "Python.main.executor": "Run",
+-    "Python.ui.executor": "Run",
+-    "RunOnceActivity.OpenProjectViewOnStart": "true",
+-    "RunOnceActivity.ShowReadmeOnStart": "true",
+-    "git-widget-placeholder": "test",
+-    "settings.editor.selected.configurable": "vcs.Git"
++  <component name="PropertiesComponent">{
++  &quot;keyToString&quot;: {
++    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
++    &quot;Python.main.executor&quot;: &quot;Run&quot;,
++    &quot;Python.ui.executor&quot;: &quot;Run&quot;,
++    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
++    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
++    &quot;git-widget-placeholder&quot;: &quot;test&quot;,
++    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;
+   },
+-  "keyToStringList": {
+-    "ChangesTree.GroupingKeys": [
+-      "directory"
++  &quot;keyToStringList&quot;: {
++    &quot;ChangesTree.GroupingKeys&quot;: [
++      &quot;directory&quot;
+     ]
+   }
+-}]]></component>
++}</component>
+   <component name="SharedIndexes">
+     <attachedChunks>
+       <set>

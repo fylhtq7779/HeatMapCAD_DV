@@ -7,6 +7,7 @@ from pynput import mouse
 import numpy as np
 import json
 import os
+from tkinter import messagebox  # Убедитесь, что этот импорт добавлен
 
 class MouseTracker:
     def __init__(self):
