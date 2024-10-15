@@ -9,8 +9,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import time
 import json
 import os
-import pandas as pd
 import ttkbootstrap as ttkb
+
 
 class MouseTrackerApp:
     def __init__(self, root):
@@ -24,8 +24,13 @@ class MouseTrackerApp:
         self.color_map = 'hot'
         self.img = None
         self.screen_resolution = None
+        self.tracks_directory = "mouse_tracks"
+
+        if not os.path.exists(self.tracks_directory):
+            os.makedirs(self.tracks_directory)
 
         self.setup_ui()
+        self.update_tracks_combobox()
 
     def setup_ui(self):
         style = ttkb.Style("superhero")
@@ -44,15 +49,19 @@ class MouseTrackerApp:
 
         self.canvas_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
-        button_style = {'bootstyle': 'primary', 'padding': 10}
-        slider_style = {'bootstyle': 'success', 'orient': tk.HORIZONTAL}
+        button_style = {'bootstyle': 'primary', 'padding': 10, 'takefocus': 0}
+        slider_style = {'bootstyle': 'success', 'orient': tk.HORIZONTAL, 'takefocus': 0}
 
         ttkb.Button(settings_frame, text="Начать отслеживание", command=self.start_tracking, **button_style).pack(
             anchor=tk.N, fill=tk.X, pady=10)
         ttkb.Button(settings_frame, text="Завершить отслеживание", command=self.stop_tracking, **button_style).pack(
             anchor=tk.N, fill=tk.X, pady=10)
-        ttkb.Button(settings_frame, text="Загрузить движения", command=self.load_positions, **button_style).pack(
-            anchor=tk.N, fill=tk.X, pady=10)
+
+        ttkb.Label(settings_frame, text="Выберите маршрут", font=("Arial", 10)).pack(anchor=tk.N)
+        self.track_combobox = ttkb.Combobox(settings_frame, state='readonly', takefocus=0)
+        self.track_combobox.pack(anchor=tk.N, fill=tk.X, pady=10)
+        self.track_combobox.bind("<<ComboboxSelected>>", self.load_selected_track)
+
         ttkb.Button(settings_frame, text="Загрузить изображение", command=self.load_image, **button_style).pack(
             anchor=tk.N, fill=tk.X, pady=10)
 
@@ -80,7 +89,7 @@ class MouseTrackerApp:
         cmap_label.pack(anchor=tk.N)
 
         cmap_options = ['hot', 'cool', 'viridis', 'plasma', 'inferno', 'magma', 'cividis']
-        self.cmap_combobox = ttkb.Combobox(settings_frame, values=cmap_options)
+        self.cmap_combobox = ttkb.Combobox(settings_frame, values=cmap_options, state='readonly', takefocus=0)
         self.cmap_combobox.set(self.color_map)
         self.cmap_combobox.pack(anchor=tk.N, fill=tk.X, pady=10)
         self.cmap_combobox.bind("<<ComboboxSelected>>", self.change_color_map)
@@ -109,7 +118,7 @@ class MouseTrackerApp:
             self.listener = mouse.Listener(on_move=self.on_move)
             self.listener.start()
 
-        msg_box = messagebox.showinfo(
+        messagebox.showinfo(
             "Информация",
             f"У вас есть {delay_seconds} секунд, чтобы свернуть окна и подготовить экран для скриншота..."
         )
@@ -124,7 +133,9 @@ class MouseTrackerApp:
             self.listener.stop()
             self.listener = None
             self.update_heatmap()
-            self.save_positions()
+            filename = self.save_positions()
+            self.update_tracks_combobox()
+            self.track_combobox.set(os.path.basename(filename))
 
     def save_positions(self):
         if self.positions and self.screen_resolution:
@@ -135,21 +146,29 @@ class MouseTrackerApp:
                 },
                 'positions': self.positions
             }
-            filename = os.path.join(os.getcwd(), "mouse_movements.json")
+            # Форматирование имени файла с текущей датой и временем (без секунд)
+            current_time = time.strftime("%Y-%m-%d_%H-%M")
+            filename = os.path.join(self.tracks_directory, f"track_{current_time}.json")
             with open(filename, 'w') as f:
                 json.dump(data, f)
             messagebox.showinfo("Информация", f"Движения мыши сохранены в: {filename}")
+            return filename
 
-    def load_positions(self):
-        filepath = filedialog.askopenfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
-        if filepath:
+    def update_tracks_combobox(self):
+        files = [f for f in os.listdir(self.tracks_directory) if f.endswith('.json')]
+        self.track_combobox['values'] = files
+
+    def load_selected_track(self, event):
+        selected_file = self.track_combobox.get()
+        if selected_file:
+            filepath = os.path.join(self.tracks_directory, selected_file)
             with open(filepath, 'r') as f:
                 data = json.load(f)
             self.positions = data['positions']
             res = data['resolution']
             self.img = np.zeros((res['height'], res['width'], 3), dtype=np.uint8)
             self.update_heatmap()
-            messagebox.showinfo("Информация", "Движения мыши загружены.")
+            messagebox.showinfo("Информация", f"Выбранный маршрут загружен: {selected_file}")
 
     def load_image(self):
         filepath = filedialog.askopenfilename(
@@ -202,6 +221,7 @@ class MouseTrackerApp:
         if filepath:
             self.fig.savefig(filepath, dpi=300)
             messagebox.showinfo("Информация", f"Тепловая карта сохранена в: {filepath}")
+
 
 if __name__ == "__main__":
     root = ttkb.Window()
