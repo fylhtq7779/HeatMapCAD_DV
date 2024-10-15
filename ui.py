@@ -17,6 +17,7 @@ class MouseTrackerApp:
         self.root = root
         self.root.title("Тепловая карта движений мыши")
         self.root.geometry("1200x800")
+        self.root.minsize(width=1200, height=800)  # Установить минимальный размер окна
 
         # Initialize components responsible for tracking and plotting
         self.mouse_tracker = MouseTracker()
@@ -27,21 +28,23 @@ class MouseTrackerApp:
     def setup_ui(self):
         style = ttkb.Style("superhero")
 
-        self.main_frame = ttk.Frame(self.root)
+        self.main_frame = ttkb.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=1)
 
         self.fig, self.ax = self.heatmap.create_figure()
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.main_frame)
         self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
-        settings_frame = ttk.Frame(self.main_frame, width=250, padding=10)
+        settings_frame = ttkb.Frame(self.main_frame, width=250, padding=10)
         settings_frame.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Настройка виджета канвы, чтобы он занял оставшееся пространство
+        self.canvas_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
         button_style = {'bootstyle': 'primary', 'padding': 10}
         slider_style = {'bootstyle': 'success', 'orient': tk.HORIZONTAL}
 
-        ttk.Button(settings_frame, text="Начать отслеживание", command=self.start_tracking, **button_style).pack(
+        ttkb.Button(settings_frame, text="Начать отслеживание", command=self.start_tracking, **button_style).pack(
             anchor=tk.N, fill=tk.X, pady=10)
         ttk.Button(settings_frame, text="Завершить отслеживание", command=self.stop_tracking, **button_style).pack(
             anchor=tk.N, fill=tk.X, pady=10)
