@@ -4,14 +4,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage import gaussian_filter
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import filedialog, messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import time
 import json
 import os
-import sys  # Импортируем sys для использования os._exit
+import sys
 import ttkbootstrap as ttkb
-
+from matplotlib.colors import Normalize
 
 class MouseTrackerApp:
     def __init__(self, root):
@@ -20,17 +20,20 @@ class MouseTrackerApp:
         self.root.geometry("1200x800")
         self.root.minsize(width=1200, height=800)
 
+        # Параметры для тепловой карты и режима временной карты
         self.positions = []
         self.listener = None
         self.color_map = 'hot'
         self.img = None
         self.screen_resolution = None
         self.tracks_directory = "mouse_tracks"
-
+        
         if not os.path.exists(self.tracks_directory):
             os.makedirs(self.tracks_directory)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+        self.is_time_map = tk.BooleanVar(value=False)  # Переменная для чекбокса
 
         self.setup_ui()
         self.update_tracks_combobox()
@@ -59,7 +62,7 @@ class MouseTrackerApp:
             anchor=tk.N, fill=tk.X, pady=10)
         ttkb.Button(settings_frame, text="Завершить отслеживание", command=self.stop_tracking, **button_style).pack(
             anchor=tk.N, fill=tk.X, pady=10)
-
+        
         ttkb.Label(settings_frame, text="Выберите маршрут", font=("Arial", 10)).pack(anchor=tk.N)
         self.track_combobox = ttkb.Combobox(settings_frame, state='readonly', takefocus=0)
         self.track_combobox.pack(anchor=tk.N, fill=tk.X, pady=10)
@@ -97,17 +100,20 @@ class MouseTrackerApp:
         self.cmap_combobox.pack(anchor=tk.N, fill=tk.X, pady=10)
         self.cmap_combobox.bind("<<ComboboxSelected>>", self.change_color_map)
 
+        ttkb.Checkbutton(settings_frame, text="Временная карта", variable=self.is_time_map,
+                         command=self.update_map, takefocus=0).pack(anchor=tk.N, pady=10)
+
         ttkb.Button(settings_frame, text="Сохранить тепловую карту", command=self.save_heatmap, **button_style).pack(
             anchor=tk.S, fill=tk.X, pady=20)
 
-        self.slider_resolution.bind("<ButtonRelease-1>", lambda event: self.update_heatmap())
-        self.slider_brightness.bind("<ButtonRelease-1>", lambda event: self.update_heatmap())
-        self.slider_size.bind("<ButtonRelease-1>", lambda event: self.update_heatmap())
-        self.slider_sensitivity.bind("<ButtonRelease-1>", lambda event: self.update_heatmap())
+        self.slider_resolution.bind("<ButtonRelease-1>", lambda event: self.update_map())
+        self.slider_brightness.bind("<ButtonRelease-1>", lambda event: self.update_map())
+        self.slider_size.bind("<ButtonRelease-1>", lambda event: self.update_map())
+        self.slider_sensitivity.bind("<ButtonRelease-1>", lambda event: self.update_map())
 
     def change_color_map(self, event):
         self.color_map = self.cmap_combobox.get()
-        self.update_heatmap()
+        self.update_map()
 
     def start_tracking(self):
         delay_seconds = 5
@@ -129,14 +135,15 @@ class MouseTrackerApp:
         self.root.after(delay_seconds * 1000, start_after_delay)
 
     def on_move(self, x, y):
-        self.positions.append((x, y))
+        timestamp = time.time()
+        self.positions.append((x, y, timestamp))
 
     def stop_tracking(self):
         if self.listener:
             self.listener.stop()
             self.listener.join()
             self.listener = None
-            self.update_heatmap()
+            self.update_map()
             filename = self.save_positions()
             self.update_tracks_combobox()
             self.track_combobox.set(os.path.basename(filename))
@@ -170,7 +177,7 @@ class MouseTrackerApp:
             self.positions = data['positions']
             res = data['resolution']
             self.img = np.zeros((res['height'], res['width'], 3), dtype=np.uint8)
-            self.update_heatmap()
+            self.update_map()
             messagebox.showinfo("Информация", f"Выбранный маршрут загружен: {selected_file}")
 
     def load_image(self):
@@ -178,14 +185,14 @@ class MouseTrackerApp:
             filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpeg"), ("All files", "*.*")])
         if filepath:
             self.img = np.array(plt.imread(filepath))
-            self.update_heatmap()
+            self.update_map()
             messagebox.showinfo("Информация", f"Изображение загружено: {filepath}")
 
     def create_heatmap(self, resolution, brightness, size_factor, sensitivity, img, x, y):
         if img is None:
             img = np.zeros((800, 1200, 3), dtype=np.uint8)
 
-        self.ax.clear()
+        self.ax.clear()  # Очистить график перед построением
 
         heatmap, xedges, yedges = np.histogram2d(x, y, bins=[resolution, resolution],
                                                  range=[[0, img.shape[1]], [0, img.shape[0]]])
@@ -204,19 +211,78 @@ class MouseTrackerApp:
         self.ax.imshow(heatmap.T, extent=extent, origin='upper', cmap=self.color_map, alpha=heatmap.T)
         self.ax.axis('off')
         self.fig.tight_layout()
-        self.fig.canvas.draw()
+        self.canvas.draw()  # Использовать canvas.draw вместо fig.canvas.draw
 
-    def update_heatmap(self):
+    def create_time_map(self, resolution, brightness, size_factor, sensitivity):
+        if self.positions:
+            x, y, timestamps = zip(*self.positions)
+
+            # Применяем чувствительность к временным меткам
+            adjusted_timestamps = np.array(timestamps) ** sensitivity
+
+            # Нормализация времени для цветовой карты
+            norm = Normalize(vmin=min(adjusted_timestamps), vmax=max(adjusted_timestamps))
+
+            if self.img is None:
+                self.img = np.zeros((800, 1200, 3), dtype=np.uint8)
+
+            self.ax.clear()  # Очистка оси
+
+            # Ограничиваем количество точек для отображения в зависимости от разрешения
+            total_points = len(x)
+            resolution_factor = int(np.clip(resolution, 1, 100))  # Ограничиваем разрешение от 1 до 100
+            num_points_to_show = int(total_points * (resolution_factor / 100))  # Количество точек зависит от разрешения
+
+            # Получаем выборку точек на основе разрешения
+            if num_points_to_show > 0:
+                indices = np.linspace(0, total_points - 1, num_points_to_show, dtype=int)
+                x = np.array(x)[indices]
+                y = np.array(y)[indices]
+                adjusted_timestamps = adjusted_timestamps[indices]
+
+            # Не переворачиваем ось Y для временной карты
+            # y = np.subtract(self.img.shape[0], y)  # УБИРАЕМ ЭТУ СТРОКУ
+
+            # Используем разрешение для изменения размера точек
+            sizes = np.full(len(x), 10 * size_factor)  # Размер точек будет зависеть от других параметров (size_factor)
+
+            # Отображаем точки
+            sc = self.ax.scatter(x, y,  # Оставляем точки как есть
+                                 c=adjusted_timestamps, cmap=self.color_map, norm=norm, s=sizes,
+                                 alpha=np.clip(brightness, 0, 1))
+
+            # Отображаем изображение
+            self.ax.imshow(np.flipud(self.img))  # Переворачиваем скриншот
+            self.ax.axis('off')
+            self.fig.tight_layout()
+
+            # Удаляем предыдущую цветовую шкалу, если она существует
+            if hasattr(self, 'cbar') and self.cbar:
+                self.cbar.remove()
+
+            # Не создаем новую цветовую шкалу в режиме временной карты
+            self.cbar = None
+
+            self.canvas.draw()
+
+    def update_map(self):
         resolution = int(float(self.slider_resolution.get()))
         brightness = self.slider_brightness.get()
         size_factor = self.slider_size.get()
         sensitivity = self.slider_sensitivity.get()
 
-        if self.positions:
-            x, y = zip(*self.positions)
-            x = np.array(x)
-            y = np.array(y)
-            self.create_heatmap(resolution, brightness, size_factor, sensitivity, self.img, x, y)
+        self.ax.clear()  # Очистка оси нужна в обоих случаях
+
+        if self.is_time_map.get():
+            self.create_time_map(resolution, brightness, size_factor, sensitivity)  # Передаем все параметры
+        else:
+            if self.positions:
+                x, y, _ = zip(*self.positions)
+                x = np.array(x)
+                y = np.array(y)
+                self.create_heatmap(resolution, brightness, size_factor, sensitivity, self.img, x, y)
+
+        self.canvas.draw()
 
     def save_heatmap(self):
         filepath = filedialog.asksaveasfilename(defaultextension=".png",
@@ -228,8 +294,7 @@ class MouseTrackerApp:
     def on_close(self):
         self.stop_tracking()
         self.root.destroy()
-        os._exit(0)  # Принудительное завершение всех процессов
-
+        os._exit(0)
 
 if __name__ == "__main__":
     root = ttkb.Window()
