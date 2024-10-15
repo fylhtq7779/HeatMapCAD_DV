@@ -201,5 +201,3 @@ if __name__ == "__main__":
     root = ttkb.Window()
     app = MouseTrackerApp(root)
     root.mainloop()
-
-#fd gf
