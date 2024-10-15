@@ -12,7 +12,6 @@ import os
 import pandas as pd
 import ttkbootstrap as ttkb  # Импортируем ttkbootstrap
 
-
 class MouseTrackerApp:
     def __init__(self, root):
         self.root = root
