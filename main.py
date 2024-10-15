@@ -28,61 +28,6 @@ class MouseTrackerApp:
 
         self.setup_ui()
 
-    def setup_ui(self):
-        style = ttkb.Style("superhero")
-
-        self.main_frame = ttkb.Frame(self.root)
-        self.main_frame.pack(fill=tk.BOTH, expand=1)
-
-        # Создаем фигуру и ось для графика
-        self.fig, self.ax = plt.subplots(figsize=(8, 8))
-        self.ax.axis('off')
-
-        # Устанавливаем канву для matplotlib
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.main_frame)
-        self.canvas_widget = self.canvas.get_tk_widget()
-
-        # Создаем фрейм для настроек
-        settings_frame = ttkb.Frame(self.main_frame, width=250, padding=10)
-        settings_frame.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Настройка виджета канвы, чтобы он занял оставшееся пространство
-        self.canvas_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-
-        button_style = {'bootstyle': 'primary', 'padding': 10}
-        slider_style = {'bootstyle': 'success', 'orient': tk.HORIZONTAL}
-
-        # Добавляем кнопки в фрейм с настройками
-        ttkb.Button(settings_frame, text="Начать отслеживание", command=self.start_tracking, **button_style).pack(
-            anchor=tk.N, fill=tk.X, pady=10)
-        ttkb.Button(settings_frame, text="Завершить отслеживание", command=self.stop_tracking, **button_style).pack(
-            anchor=tk.N, fill=tk.X, pady=10)
-        ttkb.Button(settings_frame, text="Загрузить движения", command=self.load_positions, **button_style).pack(
-            anchor=tk.N, fill=tk.X, pady=10)
-        ttkb.Button(settings_frame, text="Загрузить изображение", command=self.load_image, **button_style).pack(
-            anchor=tk.N, fill=tk.X, pady=10)
-
-        # Добавляем слайдеры и метки для них
-        ttkb.Label(settings_frame, text="Разрешение", font=("Arial", 10)).pack(anchor=tk.N)
-        self.slider_resolution = ttkb.Scale(settings_frame, from_=10, to=500, **slider_style)
-        self.slider_resolution.set(100)
-        self.slider_resolution.pack(anchor=tk.N, fill=tk.X, pady=10)
-
-        ttkb.Label(settings_frame, text="Яркость", font=("Arial", 10)).pack(anchor=tk.N)
-        self.slider_brightness = ttkb.Scale(settings_frame, from_=0.1, to=3.0, **slider_style)
-        self.slider_brightness.set(1.0)
-        self.slider_brightness.pack(anchor=tk.N, fill=tk.X, pady=10)
-
-        ttkb.Label(settings_frame, text="Размер", font=("Arial", 10)).pack(anchor=tk.N)
-        self.slider_size = ttkb.Scale(settings_frame, from_=0.1, to=3.0, **slider_style)
-        self.slider_size.set(1.0)
-        self.slider_size.pack(anchor=tk.N, fill=tk.X, pady=10)
-
-        ttkb.Label(settings_frame, text="Чувствительность", font=("Arial", 10)).pack(anchor=tk.N)
-        self.slider_sensitivity = ttkb.Scale(settings_frame, from_=0.1, to=5.0, **slider_style)
-        self.slider_sensitivity.set(1.0)
-        self.slider_sensitivity.pack(anchor=tk.N, fill=tk.X, pady=10)
-
         # Добавляем возможность выбора цветовой карты
         cmap_label = ttkb.Label(settings_frame, text="Цветовая карта", font=("Arial", 10))
         cmap_label.pack(anchor=tk.N)
@@ -226,7 +171,6 @@ class MouseTrackerApp:
         if filepath:
             self.fig.savefig(filepath, dpi=300)
             messagebox.showinfo("Информация", f"Тепловая карта сохранена в: {filepath}")
-            
     def filter_positions(self, x, y):
         filtered_x = [x[0]]
         filtered_y = [y[0]]
