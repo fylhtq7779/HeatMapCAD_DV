@@ -1,11 +1,8 @@
-```markdown
 # Mouse Tracker Application
 
 This is a Python application for tracking mouse movements and generating heatmaps based on those movements. It's built using `pyautogui`, `pynput`, `matplotlib`, and `ttkbootstrap` for GUI elements.
 
 ## Project Structure
-
-```
 project/
 │
 ├── main.py
@@ -14,7 +11,6 @@ project/
 ├── heatmap.py
 ├── utils.py
 └── README.md
-```
 
 - `main.py`: The main entry point to start the application. It initializes and runs the `MouseTrackerApp`.
 - `ui.py`: Contains the `MouseTrackerApp` class responsible for setting up the user interface using ttkbootstrap.
@@ -39,4 +35,3 @@ project/
 - numpy
 - scipy
 - ttkbootstrap
-``` 
