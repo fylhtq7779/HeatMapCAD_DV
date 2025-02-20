@@ -19,6 +19,10 @@ class Application:
         # Инициализация конфигурации
         self.config = Config()
 
+        # Создание главного окна с темой
+        self.root = ttkb.Window(themename="darkly")
+        self.style = ttkb.Style(theme="darkly")
+        
         # Инициализация компонентов
         self.data_manager = DataManager(
             storage_dir=self.config.get('storage.directory')
@@ -33,11 +37,6 @@ class Application:
 
         # Настройка визуализатора
         self.visualizer.set_config(self.config.get('visualization'))
-
-        # Создание главного окна
-        self.root = ttkb.Window(
-            themename=self.config.get('ui.theme')
-        )
         
         # Инициализация UI
         self.main_window = MainWindow(

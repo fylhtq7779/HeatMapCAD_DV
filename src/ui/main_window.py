@@ -65,10 +65,14 @@ class MainWindow:
         self.main_frame = ttkb.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=1)
 
+        # Создание фрейма для области визуализации с фоном
+        visualization_frame = ttkb.Frame(self.main_frame, bootstyle="secondary")
+        visualization_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=10, pady=10)
+
         # Создание области визуализации
-        self.canvas = FigureCanvasTkAgg(self.visualizer.fig, master=self.main_frame)
+        self.canvas = FigureCanvasTkAgg(self.visualizer.fig, master=visualization_frame)
         self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        self.canvas_widget.pack(fill=tk.BOTH, expand=1, padx=2, pady=2)
 
         # Создание панели настроек
         self.settings_frame = ttkb.Frame(self.main_frame, width=250, padding=10)
@@ -85,7 +89,7 @@ class MainWindow:
 
     def create_control_buttons(self) -> None:
         """Создание кнопок управления."""
-        button_style = {'bootstyle': 'primary', 'padding': 10, 'takefocus': 0}
+        button_style = {'bootstyle': 'success', 'padding': 10, 'takefocus': 0}
 
         ttkb.Button(
             self.settings_frame,
@@ -98,7 +102,9 @@ class MainWindow:
             self.settings_frame,
             text="Завершить отслеживание",
             command=self.stop_tracking,
-            **button_style
+            bootstyle='danger',
+            padding=10,
+            takefocus=0
         ).pack(anchor=tk.N, fill=tk.X, pady=10)
 
     def create_track_selector(self) -> None:
@@ -106,7 +112,7 @@ class MainWindow:
         ttkb.Label(
             self.settings_frame,
             text="Выберите маршрут",
-            font=("Arial", 10)
+            font=("Segoe UI", 10)
         ).pack(anchor=tk.N)
 
         self.track_combobox = ttkb.Combobox(
@@ -119,10 +125,10 @@ class MainWindow:
 
     def create_visualization_controls(self) -> None:
         """Создание элементов управления визуализацией."""
-        slider_style = {'bootstyle': 'success', 'orient': tk.HORIZONTAL, 'takefocus': 0}
+        slider_style = {'bootstyle': 'info', 'orient': tk.HORIZONTAL, 'takefocus': 0}
 
         # Цветовая карта (создаем первым)
-        ttkb.Label(self.settings_frame, text="Цветовая карта", font=("Arial", 10)).pack(anchor=tk.N)
+        ttkb.Label(self.settings_frame, text="Цветовая карта", font=("Segoe UI", 10)).pack(anchor=tk.N)
         self.cmap_combobox = ttkb.Combobox(
             self.settings_frame,
             values=['hot', 'cool', 'viridis', 'plasma', 'inferno', 'magma', 'cividis'],
@@ -133,7 +139,7 @@ class MainWindow:
         self.cmap_combobox.pack(anchor=tk.N, fill=tk.X, pady=10)
 
         # Разрешение
-        ttkb.Label(self.settings_frame, text="Разрешение", font=("Arial", 10)).pack(anchor=tk.N)
+        ttkb.Label(self.settings_frame, text="Разрешение", font=("Segoe UI", 10)).pack(anchor=tk.N)
         self.slider_resolution = ttkb.Scale(
             self.settings_frame,
             from_=10,
@@ -144,7 +150,7 @@ class MainWindow:
         self.slider_resolution.pack(anchor=tk.N, fill=tk.X, pady=10)
 
         # Яркость
-        ttkb.Label(self.settings_frame, text="Яркость", font=("Arial", 10)).pack(anchor=tk.N)
+        ttkb.Label(self.settings_frame, text="Яркость", font=("Segoe UI", 10)).pack(anchor=tk.N)
         self.slider_brightness = ttkb.Scale(
             self.settings_frame,
             from_=0.1,
@@ -155,7 +161,7 @@ class MainWindow:
         self.slider_brightness.pack(anchor=tk.N, fill=tk.X, pady=10)
 
         # Размер
-        ttkb.Label(self.settings_frame, text="Размер", font=("Arial", 10)).pack(anchor=tk.N)
+        ttkb.Label(self.settings_frame, text="Размер", font=("Segoe UI", 10)).pack(anchor=tk.N)
         self.slider_size = ttkb.Scale(
             self.settings_frame,
             from_=0.1,
@@ -166,7 +172,7 @@ class MainWindow:
         self.slider_size.pack(anchor=tk.N, fill=tk.X, pady=10)
 
         # Чувствительность
-        ttkb.Label(self.settings_frame, text="Чувствительность", font=("Arial", 10)).pack(anchor=tk.N)
+        ttkb.Label(self.settings_frame, text="Чувствительность", font=("Segoe UI", 10)).pack(anchor=tk.N)
         self.slider_sensitivity = ttkb.Scale(
             self.settings_frame,
             from_=0.1,

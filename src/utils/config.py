@@ -32,7 +32,7 @@ class Config:
             'auto_update': False
         },
         'ui': {
-            'theme': 'superhero',
+            'theme': 'darkly',
             'window_size': (1200, 800),
             'min_window_size': (800, 600)
         }

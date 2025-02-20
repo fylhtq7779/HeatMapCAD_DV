@@ -24,7 +24,7 @@
     "auto_update": false
   },
   "ui": {
-    "theme": "superhero",
+    "theme": "darkly",
     "window_size": [
       1200,
       800
