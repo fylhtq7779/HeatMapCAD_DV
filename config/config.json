@@ -1,0 +1,37 @@
+{
+  "storage": {
+    "directory": "mouse_tracks",
+    "max_files": 100
+  },
+  "visualization": {
+    "resolution": 140,
+    "brightness": 0.798148148148148,
+    "size_factor": 1.7290123456790125,
+    "sensitivity": 0.1,
+    "colormap": "hot"
+  },
+  "tracking": {
+    "min_movement": 1,
+    "sample_rate": 60
+  },
+  "network": {
+    "server_url": "",
+    "auto_upload": false,
+    "sync_interval": 300
+  },
+  "updates": {
+    "check_on_startup": true,
+    "auto_update": false
+  },
+  "ui": {
+    "theme": "superhero",
+    "window_size": [
+      1200,
+      800
+    ],
+    "min_window_size": [
+      800,
+      600
+    ]
+  }
+}

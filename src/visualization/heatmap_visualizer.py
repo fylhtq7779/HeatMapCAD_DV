@@ -1,0 +1,107 @@
+import numpy as np
+from scipy.ndimage import gaussian_filter
+import matplotlib.pyplot as plt
+from typing import List, Tuple, Any, Optional
+
+from .base_visualizer import BaseVisualizer
+
+
+class HeatmapVisualizer(BaseVisualizer):
+    """Класс для визуализации тепловой карты."""
+
+    def __init__(self):
+        super().__init__()
+        self.positions = []
+        self.fig, self.ax = plt.subplots(figsize=(8, 8))
+        self.ax.axis('off')
+        
+        # Настройки по умолчанию
+        self.config.update({
+            'resolution': 100,
+            'brightness': 1.0,
+            'size_factor': 1.0,
+            'sensitivity': 1.0,
+            'colormap': 'hot'
+        })
+        
+        # Кэш для оптимизации
+        self._cached_heatmap = None
+        self._cached_extent = None
+        self._background_image_shown = False
+
+    def update(self, data: List[Tuple[int, int, Any]]) -> None:
+        """Обновить данные для визуализации."""
+        self.positions = [(x, y) for x, y, _ in data]
+        # Сбрасываем кэш при обновлении данных
+        self._cached_heatmap = None
+
+    def _calculate_heatmap(self) -> Tuple[np.ndarray, List[float]]:
+        """Вычислить тепловую карту."""
+        if not self.positions:
+            return None, None
+
+        x, y = zip(*self.positions)
+        x = np.array(x)
+        y = np.array(y)
+
+        heatmap, xedges, yedges = np.histogram2d(
+            x, y,
+            bins=[self.config['resolution'], self.config['resolution']],
+            range=[[0, self.background_image.shape[1]], [0, self.background_image.shape[0]]]
+        )
+
+        # Применяем настройки
+        heatmap = heatmap ** self.config['sensitivity']
+        heatmap = gaussian_filter(heatmap, sigma=3 * self.config['size_factor'])
+        
+        if np.max(heatmap) != 0:
+            heatmap /= np.max(heatmap)
+        
+        heatmap *= self.config['brightness']
+        heatmap = np.clip(heatmap, 0, 1)
+
+        extent = [0, self.background_image.shape[1], self.background_image.shape[0], 0]
+        return heatmap.T, extent
+
+    def render(self) -> np.ndarray:
+        """Отрендерить тепловую карту."""
+        # Очищаем оси только если нужно
+        if not self._background_image_shown:
+            self.ax.clear()
+            self.ax.axis('off')
+            if self.background_image is not None:
+                self.ax.imshow(self.background_image)
+            self._background_image_shown = True
+
+        # Если есть позиции, создаем или используем кэшированную тепловую карту
+        if self.positions:
+            if self._cached_heatmap is None:
+                self._cached_heatmap, self._cached_extent = self._calculate_heatmap()
+            
+            if self._cached_heatmap is not None:
+                # Удаляем предыдущую тепловую карту, если она есть
+                for im in self.ax.images[1:]:
+                    im.remove()
+                
+                # Отображаем новую тепловую карту
+                self.ax.imshow(
+                    self._cached_heatmap,
+                    extent=self._cached_extent,
+                    origin='upper',
+                    cmap=self.config['colormap'],
+                    alpha=self._cached_heatmap
+                )
+
+        self.fig.canvas.draw()
+        data = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+        return data.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+
+    def set_config(self, config: dict) -> None:
+        """Установить конфигурацию визуализатора."""
+        super().set_config(config)
+        # Сбрасываем кэш при изменении конфигурации
+        self._cached_heatmap = None
+
+    def export(self, filepath: str, dpi: int = 300) -> None:
+        """Экспортировать тепловую карту в файл."""
+        self.fig.savefig(filepath, dpi=dpi, bbox_inches='tight') 
