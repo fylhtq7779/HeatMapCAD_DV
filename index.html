@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HeatMapCAD - Тепловые карты для КОМПАС-3D</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/heatmap.js@2.0.5/build/heatmap.min.js"></script>
 </head>
 <body>
     <header>
@@ -13,9 +14,9 @@
                 <h1>HeatMapCAD</h1>
                 <ul>
                     <li><a href="#features">Возможности</a></li>
+                    <li><a href="#heatmaps">Тепловые карты</a></li>
                     <li><a href="#installation">Установка</a></li>
-                    <li><a href="#documentation">Документация</a></li>
-                    <li><a href="https://github.com/your-username/heatmap-cad" target="_blank">GitHub</a></li>
+                    <li><a href="https://github.com/fylhtq7779/HeatMapCAD_DV" target="_blank">GitHub</a></li>
                 </ul>
             </div>
         </nav>
@@ -26,7 +27,29 @@
             <div class="container">
                 <h1>Тепловые карты активности в КОМПАС-3D</h1>
                 <p>Визуализируйте и анализируйте паттерны использования САПР с помощью интерактивных тепловых карт</p>
-                <a href="#download" class="button">Скачать</a>
+                <a href="https://github.com/fylhtq7779/HeatMapCAD_DV/releases" class="button">Скачать</a>
+            </div>
+        </section>
+
+        <section id="heatmaps" class="heatmaps">
+            <div class="container">
+                <h2>Загруженные тепловые карты</h2>
+                <div class="heatmap-list"></div>
+                <div class="heatmap-viewer">
+                    <div class="heatmap-container">
+                        <div id="heatmapArea"></div>
+                    </div>
+                    <div class="heatmap-controls">
+                        <label>
+                            Яркость:
+                            <input type="range" id="brightness" min="0" max="1" step="0.1" value="0.8">
+                        </label>
+                        <label>
+                            Радиус:
+                            <input type="range" id="radius" min="10" max="50" step="1" value="25">
+                        </label>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -58,8 +81,8 @@
             <div class="container">
                 <h2>Установка</h2>
                 <div class="installation-steps">
-                    <pre><code>git clone https://github.com/your-username/heatmap-cad.git
-cd heatmap-cad
+                    <pre><code>git clone https://github.com/fylhtq7779/HeatMapCAD_DV.git
+cd HeatMapCAD_DV
 python -m venv .venv
 .venv\Scripts\activate     # для Windows
 pip install -r requirements.txt</code></pre>
@@ -73,5 +96,83 @@ pip install -r requirements.txt</code></pre>
             <p>&copy; 2024 HeatMapCAD. MIT License.</p>
         </div>
     </footer>
+
+    <script>
+        // Инициализация тепловой карты
+        const heatmapInstance = h337.create({
+            container: document.getElementById('heatmapArea'),
+            radius: 25,
+            maxOpacity: 0.8,
+            minOpacity: 0
+        });
+
+        // Загрузка списка тепловых карт
+        async function loadHeatmapList() {
+            try {
+                const response = await fetch('data/heatmaps.json');
+                const heatmaps = await response.json();
+                
+                const listElement = document.querySelector('.heatmap-list');
+                listElement.innerHTML = '';
+                
+                heatmaps.forEach(heatmap => {
+                    const item = document.createElement('div');
+                    item.className = 'heatmap-item';
+                    const date = new Date(heatmap.created);
+                    item.innerHTML = `
+                        <h3>${heatmap.name}</h3>
+                        <p>Создано: ${date.toLocaleString()}</p>
+                        <button onclick="loadHeatmap('${heatmap.id}')">Показать</button>
+                    `;
+                    listElement.appendChild(item);
+                });
+            } catch (error) {
+                console.error('Error loading heatmap list:', error);
+                const listElement = document.querySelector('.heatmap-list');
+                listElement.innerHTML = '<p class="error">Нет доступных тепловых карт</p>';
+            }
+        }
+
+        // Загрузка и отображение тепловой карты
+        async function loadHeatmap(id) {
+            try {
+                const response = await fetch(`data/maps/${id}.json`);
+                const data = await response.json();
+                
+                // Преобразуем данные в формат heatmap.js
+                const points = data.positions.map(([x, y]) => ({
+                    x: Math.round(x),
+                    y: Math.round(y),
+                    value: 1
+                }));
+
+                // Устанавливаем размеры контейнера
+                const container = document.getElementById('heatmapArea');
+                container.style.width = `${data.resolution.width}px`;
+                container.style.height = `${data.resolution.height}px`;
+
+                // Обновляем тепловую карту
+                heatmapInstance.setData({
+                    max: 10,
+                    data: points
+                });
+            } catch (error) {
+                console.error('Error loading heatmap:', error);
+                alert('Ошибка загрузки тепловой карты');
+            }
+        }
+
+        // Обработчики изменения настроек
+        document.getElementById('brightness').addEventListener('input', (e) => {
+            heatmapInstance.configure({ maxOpacity: parseFloat(e.target.value) });
+        });
+
+        document.getElementById('radius').addEventListener('input', (e) => {
+            heatmapInstance.configure({ radius: parseInt(e.target.value) });
+        });
+
+        // Загружаем список при загрузке страницы
+        document.addEventListener('DOMContentLoaded', loadHeatmapList);
+    </script>
 </body>
 </html> 
