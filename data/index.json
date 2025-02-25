@@ -1,0 +1,12 @@
+{
+    "heatmaps": [
+        {
+            "date": "2024-02-25T11:14:20",
+            "user_fullname": "Тестовый пользователь",
+            "user_group": "Тестовая группа",
+            "program": "Компас 3D",
+            "html_file": "heatmap_20250225_111420.html",
+            "json_file": "heatmap_20250225_111420.json"
+        }
+    ]
+} 
