@@ -15,6 +15,14 @@
       "program": "Компас 3D",
       "html_file": "heatmap_20250225_114315.html",
       "json_file": "heatmap_20250225_114315.json"
+    },
+    {
+      "date": "2024-02-25T15:00:00.000000",
+      "user_fullname": "Тестовый Пользователь",
+      "user_group": "Тест-001",
+      "program": "Компас 3D",
+      "html_file": "heatmap_20240225_150000.html",
+      "json_file": "heatmap_20240225_150000.json"
     }
   ]
 }

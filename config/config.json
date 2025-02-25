@@ -4,7 +4,7 @@
     "max_files": 100
   },
   "visualization": {
-    "resolution": 140,
+    "resolution": 270,
     "brightness": 0.798148148148148,
     "size_factor": 1.7290123456790125,
     "sensitivity": 0.1,
@@ -15,13 +15,14 @@
     "sample_rate": 60
   },
   "network": {
+    "server_url": "",
+    "auto_upload": true,
+    "sync_interval": 300,
     "github": {
       "repo": "fylhtq7779/HeatMapCAD_DV",
       "branch": "gh-pages",
       "data_directory": "data"
-    },
-    "auto_upload": true,
-    "sync_interval": 300
+    }
   },
   "updates": {
     "check_on_startup": true,
