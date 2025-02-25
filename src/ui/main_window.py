@@ -3,6 +3,7 @@ from tkinter import messagebox, filedialog
 import ttkbootstrap as ttkb
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from typing import Any, Dict, Optional
+import os
 
 from core.mouse_tracker import MouseTracker
 from visualization.heatmap_visualizer import HeatmapVisualizer
@@ -190,14 +191,27 @@ class MainWindow:
         self.slider_sensitivity.configure(command=lambda _: self._schedule_update())
 
     def create_save_button(self) -> None:
-        """Создание кнопки сохранения."""
+        """Создание кнопок сохранения и загрузки."""
         button_style = {'bootstyle': 'primary', 'padding': 10, 'takefocus': 0}
+
+        # Кнопка сохранения тепловой карты
         ttkb.Button(
             self.settings_frame,
             text="Сохранить тепловую карту",
             command=self.save_heatmap,
             **button_style
-        ).pack(anchor=tk.S, fill=tk.X, pady=20)
+        ).pack(anchor=tk.S, fill=tk.X, pady=(20, 5))
+
+        # Кнопка загрузки на GitHub Pages
+        if self.config.get('network.github.token'):
+            ttkb.Button(
+                self.settings_frame,
+                text="Опубликовать на сайте",
+                command=self.upload_to_github,
+                bootstyle='info',
+                padding=10,
+                takefocus=0
+            ).pack(anchor=tk.S, fill=tk.X, pady=5)
 
     def start_tracking(self) -> None:
         """Начать отслеживание мыши."""
@@ -308,4 +322,38 @@ class MainWindow:
                 messagebox.showerror(
                     "Ошибка",
                     f"Не удалось сохранить тепловую карту: {e}"
-                ) 
+                )
+
+    def upload_to_github(self) -> None:
+        """Загрузить текущий трек на GitHub Pages."""
+        if not self.track_combobox or not self.track_combobox.get():
+            messagebox.showwarning(
+                "Предупреждение",
+                "Сначала выберите трек для загрузки"
+            )
+            return
+
+        selected_file = self.track_combobox.get()
+        file_path = os.path.join(self.data_manager.storage_dir, selected_file)
+
+        try:
+            from network.github_client import GitHubClient
+            
+            client = GitHubClient(
+                token=self.config.get('network.github.token'),
+                repo_name=self.config.get('network.github.repo')
+            )
+            
+            metadata = client.upload_heatmap(file_path)
+            url = client.get_heatmap_url(metadata['id'])
+            
+            messagebox.showinfo(
+                "Успех",
+                f"Тепловая карта опубликована!\nID: {metadata['id']}\nURL: {url}"
+            )
+
+        except Exception as e:
+            messagebox.showerror(
+                "Ошибка",
+                f"Не удалось загрузить данные: {str(e)}"
+            ) 

@@ -15,7 +15,10 @@
     "sample_rate": 60
   },
   "network": {
-    "server_url": "",
+    "github": {
+      "token": "",
+      "repo": "fylhtq7779/HeatMapCAD_DV"
+    },
     "auto_upload": false,
     "sync_interval": 300
   },
