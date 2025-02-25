@@ -15,7 +15,7 @@
     "sample_rate": 60
   },
   "network": {
-    "server_url": "",
+    "server_url": "http://localhost:3000",
     "auto_upload": false,
     "sync_interval": 300
   },

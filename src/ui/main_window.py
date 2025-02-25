@@ -3,11 +3,13 @@ from tkinter import messagebox, filedialog
 import ttkbootstrap as ttkb
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from typing import Any, Dict, Optional
+import os
 
 from core.mouse_tracker import MouseTracker
 from visualization.heatmap_visualizer import HeatmapVisualizer
 from data.data_manager import DataManager
 from network.client import NetworkClient
+from network.api_client import APIClient
 from utils.config import Config
 from utils.sound import play_start_sound
 
@@ -31,6 +33,7 @@ class MainWindow:
         self.visualizer = visualizer
         self.data_manager = data_manager
         self.network_client = network_client
+        self.api_client = APIClient(config.get('network.server_url'))
 
         # Инициализация UI компонентов
         self.main_frame: Optional[ttkb.Frame] = None
@@ -43,6 +46,8 @@ class MainWindow:
         self.slider_size: Optional[ttkb.Scale] = None
         self.slider_sensitivity: Optional[ttkb.Scale] = None
         self.cmap_combobox: Optional[ttkb.Combobox] = None
+        self.upload_progress: Optional[ttkb.Progressbar] = None
+        self.upload_label: Optional[ttkb.Label] = None
 
         # Добавляем переменные для debounce
         self._update_timer = None
@@ -68,6 +73,8 @@ class MainWindow:
         # Создание фрейма для области визуализации с фоном
         visualization_frame = ttkb.Frame(self.main_frame, bootstyle="secondary")
         visualization_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=10, pady=10)
+        visualization_frame.pack_propagate(False)  # Запрещаем изменение размера фрейма
+        visualization_frame.configure(width=400)  # Устанавливаем минимальную ширину
 
         # Создание области визуализации
         self.canvas = FigureCanvasTkAgg(self.visualizer.fig, master=visualization_frame)
@@ -77,6 +84,7 @@ class MainWindow:
         # Создание панели настроек
         self.settings_frame = ttkb.Frame(self.main_frame, width=250, padding=10)
         self.settings_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        self.settings_frame.pack_propagate(False)  # Запрещаем изменение размера фрейма
 
         # Создание элементов управления
         self.create_control_buttons()
@@ -190,14 +198,42 @@ class MainWindow:
         self.slider_sensitivity.configure(command=lambda _: self._schedule_update())
 
     def create_save_button(self) -> None:
-        """Создание кнопки сохранения."""
+        """Создание кнопок сохранения и загрузки."""
         button_style = {'bootstyle': 'primary', 'padding': 10, 'takefocus': 0}
+
+        # Кнопка сохранения тепловой карты
         ttkb.Button(
             self.settings_frame,
             text="Сохранить тепловую карту",
             command=self.save_heatmap,
             **button_style
-        ).pack(anchor=tk.S, fill=tk.X, pady=20)
+        ).pack(anchor=tk.S, fill=tk.X, pady=(20, 5))
+
+        # Кнопка загрузки на сервер
+        ttkb.Button(
+            self.settings_frame,
+            text="Загрузить на сервер",
+            command=self.upload_to_server,
+            bootstyle='info',
+            padding=10,
+            takefocus=0
+        ).pack(anchor=tk.S, fill=tk.X, pady=5)
+
+        # Прогресс-бар загрузки
+        self.upload_label = ttkb.Label(
+            self.settings_frame,
+            text="",
+            font=("Segoe UI", 9)
+        )
+        self.upload_label.pack(anchor=tk.S, fill=tk.X, pady=(5, 0))
+
+        self.upload_progress = ttkb.Progressbar(
+            self.settings_frame,
+            mode='determinate',
+            bootstyle='info'
+        )
+        self.upload_progress.pack(anchor=tk.S, fill=tk.X, pady=(0, 20))
+        self.upload_progress.pack_forget()  # Скрываем до начала загрузки
 
     def start_tracking(self) -> None:
         """Начать отслеживание мыши."""
@@ -308,4 +344,47 @@ class MainWindow:
                 messagebox.showerror(
                     "Ошибка",
                     f"Не удалось сохранить тепловую карту: {e}"
-                ) 
+                )
+
+    def upload_to_server(self) -> None:
+        """Загрузить текущий трек на сервер."""
+        if not self.track_combobox or not self.track_combobox.get():
+            messagebox.showwarning(
+                "Предупреждение",
+                "Сначала выберите трек для загрузки"
+            )
+            return
+
+        selected_file = self.track_combobox.get()
+        file_path = os.path.join(self.data_manager.storage_dir, selected_file)
+
+        def update_progress(progress: int) -> None:
+            """Обновить прогресс-бар."""
+            self.upload_label.configure(text=f"Загрузка: {progress}%")
+            self.upload_progress['value'] = progress
+            if progress >= 100:
+                self.upload_progress.pack_forget()
+                self.upload_label.configure(text="Загрузка завершена")
+                self.root.after(2000, lambda: self.upload_label.configure(text=""))
+
+        try:
+            # Показываем прогресс-бар
+            self.upload_progress['value'] = 0
+            self.upload_progress.pack(anchor=tk.S, fill=tk.X, pady=(0, 20))
+            self.upload_label.configure(text="Подготовка к загрузке...")
+
+            # Загружаем файл
+            response = self.api_client.upload_heatmap_data(file_path, update_progress)
+            
+            messagebox.showinfo(
+                "Успех",
+                f"Данные успешно загружены на сервер\nID: {response.get('id', 'unknown')}"
+            )
+
+        except Exception as e:
+            self.upload_progress.pack_forget()
+            self.upload_label.configure(text="")
+            messagebox.showerror(
+                "Ошибка",
+                f"Не удалось загрузить данные на сервер: {str(e)}"
+            ) 
