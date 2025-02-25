@@ -4,9 +4,9 @@
     "max_files": 100
   },
   "visualization": {
-    "resolution": 270,
-    "brightness": 0.798148148148148,
-    "size_factor": 1.7290123456790125,
+    "resolution": 305,
+    "brightness": 1.4574468085106385,
+    "size_factor": 2.269858156028369,
     "sensitivity": 0.1,
     "colormap": "hot"
   },

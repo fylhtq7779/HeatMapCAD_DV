@@ -29,6 +29,10 @@ class HeatmapVisualizer(BaseVisualizer):
         self._cached_extent = None
         self._background_image_shown = False
         self._last_window_size = None
+        
+        # Улучшаем отображение
+        self.fig.tight_layout(pad=0)
+        self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     def update(self, data: List[Tuple[int, int, Any]]) -> None:
         """Обновить данные для визуализации."""
@@ -72,6 +76,10 @@ class HeatmapVisualizer(BaseVisualizer):
             # Устанавливаем размер в дюймах (1 дюйм = 100 пикселей)
             self.fig.set_size_inches(width/100, height/100)
             self._last_window_size = current_size
+            
+            # Обновляем компоновку для правильного центрирования
+            self.fig.tight_layout(pad=0)
+            self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     def render(self) -> np.ndarray:
         """Отрендерить тепловую карту."""
@@ -80,11 +88,16 @@ class HeatmapVisualizer(BaseVisualizer):
             self._update_figure_size()
             
             # Очищаем оси только если нужно
-            if not self._background_image_shown:
+            if not self._background_image_shown or self.background_image is not None:
                 self.ax.clear()
                 self.ax.axis('off')
                 if self.background_image is not None:
-                    self.ax.imshow(self.background_image)
+                    # Отображаем фоновое изображение с правильным центрированием
+                    self.ax.imshow(self.background_image, extent=[0, self.background_image.shape[1], 
+                                                                 self.background_image.shape[0], 0])
+                    # Устанавливаем границы осей точно по размеру изображения
+                    self.ax.set_xlim(0, self.background_image.shape[1])
+                    self.ax.set_ylim(self.background_image.shape[0], 0)
                 self._background_image_shown = True
 
             # Если есть позиции, создаем или используем кэшированную тепловую карту
@@ -105,6 +118,11 @@ class HeatmapVisualizer(BaseVisualizer):
                         cmap=self.config['colormap'],
                         alpha=self._cached_heatmap
                     )
+                    
+                    # Устанавливаем границы осей точно по размеру изображения
+                    if self.background_image is not None:
+                        self.ax.set_xlim(0, self.background_image.shape[1])
+                        self.ax.set_ylim(self.background_image.shape[0], 0)
 
             # Обновляем холст
             self.fig.canvas.draw()

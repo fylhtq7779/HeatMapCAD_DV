@@ -36,8 +36,8 @@ class MainWindow:
         self.user_data = user_data
 
         # Настройка главного окна
-        window_size = self.config.get('ui.window_size', [1200, 800])
-        min_window_size = self.config.get('ui.min_window_size', [800, 600])
+        window_size = self.config.get('ui.window_size', [1800, 950])  # Значительно увеличиваем размер окна
+        min_window_size = self.config.get('ui.min_window_size', [1600, 800])  # Увеличиваем минимальный размер
         self.root.geometry(f"{window_size[0]}x{window_size[1]}")
         self.root.minsize(min_window_size[0], min_window_size[1])
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -53,6 +53,8 @@ class MainWindow:
         self.slider_size: Optional[ttkb.Scale] = None
         self.slider_sensitivity: Optional[ttkb.Scale] = None
         self.cmap_combobox: Optional[ttkb.Combobox] = None
+        self.tracking_button: Optional[ttkb.Button] = None  # Добавляем переменную для кнопки отслеживания
+        self.is_tracking: bool = False  # Добавляем флаг для отслеживания состояния
 
         # Добавляем переменные для debounce
         self._update_timer = None
@@ -69,8 +71,17 @@ class MainWindow:
         # Создание основного фрейма
         self.main_frame = ttkb.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=1)
-
+        
+        # Создаем фрейм с фиксированной шириной для правой панели
+        right_panel_width = 300  # Устанавливаем ширину 300 пикселей
+        self.settings_frame = ttkb.Frame(self.main_frame, width=right_panel_width)
+        self.settings_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+        
+        # Важно: устанавливаем фиксированную ширину и запрещаем изменение размера
+        self.settings_frame.pack_propagate(False)
+        
         # Создание фрейма для области визуализации с фоном
+        # Размещаем его после правой панели, чтобы он занимал оставшееся пространство
         visualization_frame = ttkb.Frame(self.main_frame, bootstyle="secondary")
         visualization_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=10, pady=10)
 
@@ -78,11 +89,9 @@ class MainWindow:
         self.canvas = FigureCanvasTkAgg(self.visualizer.fig, master=visualization_frame)
         self.canvas_widget = self.canvas.get_tk_widget()
         self.canvas_widget.pack(fill=tk.BOTH, expand=1, padx=2, pady=2)
-
-        # Создание панели настроек с фиксированной шириной
-        self.settings_frame = ttkb.Frame(self.main_frame, width=350)  # Увеличиваем ширину
-        self.settings_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
-        self.settings_frame.pack_propagate(False)  # Запрещаем изменение размера
+        
+        # Добавляем обработчик изменения размера окна
+        self.root.bind("<Configure>", self._on_window_resize)
 
         # Создание элементов управления
         self.create_control_buttons()
@@ -96,23 +105,16 @@ class MainWindow:
 
     def create_control_buttons(self) -> None:
         """Создание кнопок управления."""
-        button_style = {'bootstyle': 'success', 'padding': 10, 'takefocus': 0}
-
-        ttkb.Button(
+        # Создаем одну кнопку для управления отслеживанием
+        self.tracking_button = ttkb.Button(
             self.settings_frame,
             text="Начать отслеживание",
-            command=self.start_tracking,
-            **button_style
-        ).pack(anchor=tk.N, fill=tk.X, pady=10)
-
-        ttkb.Button(
-            self.settings_frame,
-            text="Завершить отслеживание",
-            command=self.stop_tracking,
-            bootstyle='danger',
+            command=self.toggle_tracking,
+            bootstyle='success',
             padding=10,
             takefocus=0
-        ).pack(anchor=tk.N, fill=tk.X, pady=10)
+        )
+        self.tracking_button.pack(anchor=tk.N, fill=tk.X, pady=10)
 
     def create_track_selector(self) -> None:
         """Создание селектора треков."""
@@ -219,6 +221,13 @@ class MainWindow:
                 takefocus=0
             ).pack(anchor=tk.S, fill=tk.X, pady=5)
 
+    def toggle_tracking(self) -> None:
+        """Переключение режима отслеживания."""
+        if self.is_tracking:
+            self.stop_tracking()
+        else:
+            self.start_tracking()
+
     def start_tracking(self) -> None:
         """Начать отслеживание мыши."""
         delay_seconds = 5
@@ -226,12 +235,32 @@ class MainWindow:
             "Информация",
             f"У вас есть {delay_seconds} секунд, чтобы свернуть окна и подготовить экран для скриншота..."
         )
-        # Запускаем отслеживание с задержкой и звуком
-        self.root.after(delay_seconds * 1000, lambda: [play_start_sound(), self.mouse_tracker.start_tracking()])
+        
+        # Изменяем состояние кнопки на серую (неактивную) во время таймера
+        self.tracking_button.config(text="Подготовка... (5 сек)", bootstyle='secondary', state='disabled')
+        
+        # Функция для запуска отслеживания после задержки
+        def start_after_delay():
+            # Активируем кнопку и меняем её цвет на красный
+            self.is_tracking = True
+            self.tracking_button.config(text="Завершить отслеживание", bootstyle='danger', state='normal')
+            # Запускаем отслеживание со звуком
+            play_start_sound()
+            self.mouse_tracker.start_tracking()
+        
+        # Запускаем отслеживание с задержкой
+        self.root.after(delay_seconds * 1000, start_after_delay)
 
     def stop_tracking(self) -> None:
         """Остановить отслеживание мыши."""
         self.mouse_tracker.stop_tracking()
+        
+        # Изменяем состояние кнопки
+        self.is_tracking = False
+        self.tracking_button.config(text="Начать отслеживание", bootstyle='success')
+        
+        # Обновляем список треков после остановки отслеживания
+        self.update_track_list()
 
     def update_track_list(self) -> None:
         """Обновить список доступных треков."""
@@ -418,4 +447,15 @@ class MainWindow:
             self.root.destroy()
         except Exception as e:
             print(f"Ошибка при закрытии приложения: {e}")
-            self.root.destroy() 
+            self.root.destroy()
+
+    def _on_window_resize(self, event: Any) -> None:
+        """Обработчик изменения размера окна."""
+        # Проверяем, что событие пришло от главного окна, а не от дочерних виджетов
+        if event.widget == self.root:
+            # Используем debounce для предотвращения слишком частых обновлений
+            if self._update_timer is not None:
+                self.root.after_cancel(self._update_timer)
+            
+            # Планируем обновление через небольшую задержку
+            self._update_timer = self.root.after(100, self.update_visualization) 
