@@ -5,6 +5,7 @@ from datetime import datetime
 import threading
 import time
 import os
+from .api_client import APIClient
 
 
 class NetworkClient:
@@ -18,18 +19,26 @@ class NetworkClient:
             config: Конфигурация сетевого взаимодействия
         """
         self.config = config
-        self.server_url = "https://fylhtq7779.github.io/HeatMapCAD_DV"  # URL нашего сайта
         self.data_path = 'data'  # Локальная директория для данных
         self.auto_upload = config.get('auto_upload', False)
         self.sync_interval = config.get('sync_interval', 300)
         self.sync_thread: Optional[threading.Thread] = None
         self.is_running = False
+        self.api_client = APIClient()
+        self.start_time = datetime.now()
 
     def _datetime_to_str(self, obj: Any) -> str:
         """Преобразовать datetime в строку."""
         if isinstance(obj, datetime):
             return obj.isoformat()
         raise TypeError(f'Object of type {type(obj)} is not JSON serializable')
+
+    def _calculate_session_duration(self) -> str:
+        """Вычислить длительность сессии."""
+        duration = datetime.now() - self.start_time
+        hours = duration.seconds // 3600
+        minutes = (duration.seconds % 3600) // 60
+        return f"{hours}h {minutes}m"
 
     def save_locally(self, data: Dict[str, Any], user_data: Dict[str, Any]) -> bool:
         """
@@ -43,38 +52,23 @@ class NetworkClient:
             # Создаем уникальное имя файла с временной меткой
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             json_filename = f"heatmap_{timestamp}.json"
-            html_filename = f"heatmap_{timestamp}.html"
             
-            # Добавляем информацию о пользователе в данные
-            data['user'] = {
-                'fullname': user_data.get('fullname', ''),
-                'group': user_data.get('group', ''),
-                'program': user_data.get('program', 'Компас 3D')
+            # Создаем структуру данных
+            heatmap_data = {
+                "metadata": {
+                    "fio": user_data.get('fullname', ''),
+                    "group": user_data.get('group', ''),
+                    "program": user_data.get('selected_program', user_data.get('program', 'AutoCAD')),
+                    "timestamp": datetime.now().isoformat(),
+                    "session_duration": self._calculate_session_duration(),
+                    "version": "1.0"
+                },
+                "tracking_data": {
+                    "resolution": data.get('resolution', {'width': 1920, 'height': 1080}),
+                    "movements": data.get('movements', []),
+                    "clicks": data.get('clicks', [])
+                }
             }
-            
-            # Преобразуем данные в JSON с обработкой datetime
-            json_data = json.dumps(data, ensure_ascii=False, indent=2, default=self._datetime_to_str)
-            
-            # Создаем HTML файл с данными
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Тепловая карта - {user_data.get('fullname', '')}</title>
-                <script type="application/json" id="heatmap-data">
-                {json_data}
-                </script>
-            </head>
-            <body>
-                <div id="heatmap-container"></div>
-                <script>
-                    // Данные будут доступны через document.getElementById('heatmap-data').textContent
-                    console.log('HeatMap data loaded');
-                </script>
-            </body>
-            </html>
-            """
             
             # Создаем директории если их нет
             os.makedirs(self.data_path, exist_ok=True)
@@ -83,43 +77,61 @@ class NetworkClient:
             # Сохраняем JSON
             json_path = os.path.join(self.data_path, 'maps', json_filename)
             with open(json_path, 'w', encoding='utf-8') as f:
-                f.write(json_data)
-            
-            # Сохраняем HTML
-            html_path = os.path.join(self.data_path, 'maps', html_filename)
-            with open(html_path, 'w', encoding='utf-8') as f:
-                f.write(html_content)
-            
-            # Обновляем index.json
-            index_path = os.path.join(self.data_path, 'index.json')
-            index_data = {"heatmaps": []}
-            
-            if os.path.exists(index_path):
-                try:
-                    with open(index_path, 'r', encoding='utf-8') as f:
-                        index_data = json.load(f)
-                except:
-                    pass
-            
-            # Добавляем информацию о новой карте
-            index_data['heatmaps'].append({
-                'date': datetime.now().isoformat(),
-                'user_fullname': user_data.get('fullname', ''),
-                'user_group': user_data.get('group', ''),
-                'program': user_data.get('program', 'Компас 3D'),
-                'html_file': f"maps/{html_filename}",
-                'json_file': f"maps/{json_filename}"
-            })
-            
-            # Сохраняем обновленный index.json
-            with open(index_path, 'w', encoding='utf-8') as f:
-                json.dump(index_data, f, ensure_ascii=False, indent=2)
+                json.dump(heatmap_data, f, ensure_ascii=False, indent=2, default=self._datetime_to_str)
             
             return True
             
         except Exception as e:
             print(f"Ошибка при сохранении данных: {e}")
             return False
+
+    def upload_tracking_data(self, data: Dict[str, Any]) -> bool:
+        """
+        Загрузить данные трекинга.
+        
+        Args:
+            data: Данные для загрузки
+            
+        Returns:
+            bool: True если загрузка успешна, False в противном случае
+        """
+        print("\nПроверка данных в NetworkClient:")
+        
+        # Проверяем формат данных
+        movements = []
+        if 'tracking_data' in data and isinstance(data['tracking_data'], list):
+            # Данные в формате [x, y, timestamp]
+            movements = [
+                {"x": pos[0], "y": pos[1], "timestamp": pos[2], "event_type": "move"}
+                for pos in data['tracking_data']
+            ]
+            print(f"Найдено {len(movements)} движений мыши в формате tracking_data")
+        elif 'movements' in data and isinstance(data['movements'], list):
+            # Данные уже в нужном формате
+            movements = data['movements']
+            print(f"Найдено {len(movements)} движений мыши в формате movements")
+        
+        # Обновляем данные
+        data['movements'] = movements
+        data['clicks'] = data.get('clicks', [])
+        
+        print("Movements:", len(data.get('movements', [])))
+        print("Clicks:", len(data.get('clicks', [])))
+        print("Sample movement:", data.get('movements', [])[:1])
+        print("Sample click:", data.get('clicks', [])[:1])
+        
+        user_data = data.get('user', {})
+        
+        # Добавляем длительность сессии и обновляем данные
+        data['session_duration'] = self._calculate_session_duration()
+        
+        # Сначала сохраняем локально
+        if not self.save_locally(data, user_data):
+            print("Ошибка при локальном сохранении данных")
+            return False
+            
+        # Затем отправляем на сервер
+        return self.api_client.send_heatmap_data(data, user_data)
 
     def start_auto_sync(self) -> None:
         """Запустить автоматическую синхронизацию."""
@@ -141,8 +153,4 @@ class NetworkClient:
                 # В этой версии нет необходимости в синхронизации
                 time.sleep(self.sync_interval)
             except Exception as e:
-                print(f"Ошибка синхронизации: {e}")
-
-    def upload_tracking_data(self, data: Dict[str, Any]) -> bool:
-        """Загрузить данные трекинга."""
-        return self.save_locally(data, data.get('user', {})) 
+                print(f"Ошибка синхронизации: {e}") 

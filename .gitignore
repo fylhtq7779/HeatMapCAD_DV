@@ -4,6 +4,10 @@ build/
 .idea/workspace.xml
 .venv/
 
+# Данные тепловых карт
+data/maps/*.json
+data/temp_heatmap.json
+
 # Python
 __pycache__/
 *.py[cod]
