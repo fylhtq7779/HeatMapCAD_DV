@@ -33,6 +33,13 @@ class MainWindow:
         self.data_manager = data_manager
         self.network_client = network_client
 
+        # Настройка главного окна
+        window_size = self.config.get('ui.window_size', [1200, 800])
+        min_window_size = self.config.get('ui.min_window_size', [800, 600])
+        self.root.geometry(f"{window_size[0]}x{window_size[1]}")
+        self.root.minsize(min_window_size[0], min_window_size[1])
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
         # Инициализация UI компонентов
         self.main_frame: Optional[ttkb.Frame] = None
         self.settings_frame: Optional[ttkb.Frame] = None
@@ -50,12 +57,7 @@ class MainWindow:
         self._is_updating = False
 
         # Настройка окна
-        window_size = self.config.get('ui.window_size')
-        min_window_size = self.config.get('ui.min_window_size')
-        
         self.root.title("Тепловая карта движений мыши")
-        self.root.geometry(f"{window_size[0]}x{window_size[1]}")
-        self.root.minsize(width=min_window_size[0], height=min_window_size[1])
 
         # Создание UI
         self.create_ui()
@@ -76,8 +78,9 @@ class MainWindow:
         self.canvas_widget.pack(fill=tk.BOTH, expand=1, padx=2, pady=2)
 
         # Создание панели настроек
-        self.settings_frame = ttkb.Frame(self.main_frame, width=250, padding=10)
-        self.settings_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        self.settings_frame = ttkb.Frame(self.main_frame, width=300)
+        self.settings_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+        self.settings_frame.pack_propagate(False)  # Запрещаем изменение размера
 
         # Создание элементов управления
         self.create_control_buttons()
@@ -356,4 +359,26 @@ class MainWindow:
             messagebox.showerror(
                 "Ошибка",
                 f"Не удалось загрузить данные: {str(e)}"
-            ) 
+            )
+
+    def _on_close(self) -> None:
+        """Обработчик закрытия окна."""
+        try:
+            # Останавливаем отслеживание
+            if self.mouse_tracker:
+                self.mouse_tracker.stop_tracking()
+            
+            # Останавливаем синхронизацию
+            if self.network_client:
+                self.network_client.stop_auto_sync()
+            
+            # Сохраняем текущие настройки
+            if self.config:
+                self.config.save()
+            
+            # Закрываем окно
+            self.root.quit()
+            self.root.destroy()
+        except Exception as e:
+            print(f"Ошибка при закрытии приложения: {e}")
+            self.root.destroy() 

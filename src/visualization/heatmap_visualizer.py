@@ -28,6 +28,7 @@ class HeatmapVisualizer(BaseVisualizer):
         self._cached_heatmap = None
         self._cached_extent = None
         self._background_image_shown = False
+        self._last_window_size = None
 
     def update(self, data: List[Tuple[int, int, Any]]) -> None:
         """Обновить данные для визуализации."""
@@ -63,38 +64,71 @@ class HeatmapVisualizer(BaseVisualizer):
         extent = [0, self.background_image.shape[1], self.background_image.shape[0], 0]
         return heatmap.T, extent
 
+    def _update_figure_size(self) -> None:
+        """Обновить размер фигуры в соответствии с размером окна."""
+        current_size = self.fig.canvas.get_width_height()
+        if self._last_window_size != current_size:
+            width, height = current_size
+            # Устанавливаем размер в дюймах (1 дюйм = 100 пикселей)
+            self.fig.set_size_inches(width/100, height/100)
+            self._last_window_size = current_size
+
     def render(self) -> np.ndarray:
         """Отрендерить тепловую карту."""
-        # Очищаем оси только если нужно
-        if not self._background_image_shown:
-            self.ax.clear()
-            self.ax.axis('off')
-            if self.background_image is not None:
-                self.ax.imshow(self.background_image)
-            self._background_image_shown = True
-
-        # Если есть позиции, создаем или используем кэшированную тепловую карту
-        if self.positions:
-            if self._cached_heatmap is None:
-                self._cached_heatmap, self._cached_extent = self._calculate_heatmap()
+        try:
+            # Обновляем размер фигуры
+            self._update_figure_size()
             
-            if self._cached_heatmap is not None:
-                # Удаляем предыдущую тепловую карту, если она есть
-                for im in self.ax.images[1:]:
-                    im.remove()
-                
-                # Отображаем новую тепловую карту
-                self.ax.imshow(
-                    self._cached_heatmap,
-                    extent=self._cached_extent,
-                    origin='upper',
-                    cmap=self.config['colormap'],
-                    alpha=self._cached_heatmap
-                )
+            # Очищаем оси только если нужно
+            if not self._background_image_shown:
+                self.ax.clear()
+                self.ax.axis('off')
+                if self.background_image is not None:
+                    self.ax.imshow(self.background_image)
+                self._background_image_shown = True
 
-        self.fig.canvas.draw()
-        data = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
-        return data.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+            # Если есть позиции, создаем или используем кэшированную тепловую карту
+            if self.positions:
+                if self._cached_heatmap is None:
+                    self._cached_heatmap, self._cached_extent = self._calculate_heatmap()
+                
+                if self._cached_heatmap is not None:
+                    # Удаляем предыдущую тепловую карту, если она есть
+                    for im in self.ax.images[1:]:
+                        im.remove()
+                    
+                    # Отображаем новую тепловую карту
+                    self.ax.imshow(
+                        self._cached_heatmap,
+                        extent=self._cached_extent,
+                        origin='upper',
+                        cmap=self.config['colormap'],
+                        alpha=self._cached_heatmap
+                    )
+
+            # Обновляем холст
+            self.fig.canvas.draw()
+            
+            # Получаем размеры холста
+            width, height = self.fig.canvas.get_width_height()
+            
+            # Получаем данные изображения
+            data = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+            expected_size = width * height * 3
+            
+            # Проверяем соответствие размеров
+            if len(data) != expected_size:
+                # Если размеры не совпадают, масштабируем данные
+                data = data[:expected_size]
+            
+            # Преобразуем в нужную форму
+            return data.reshape(height, width, 3)
+            
+        except Exception as e:
+            print(f"Ошибка при рендеринге тепловой карты: {e}")
+            # Возвращаем пустое изображение в случае ошибки
+            width, height = self.fig.canvas.get_width_height()
+            return np.zeros((height, width, 3), dtype=np.uint8)
 
     def set_config(self, config: dict) -> None:
         """Установить конфигурацию визуализатора."""

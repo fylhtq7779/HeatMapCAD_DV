@@ -1,0 +1,11 @@
+{
+    "user": {
+        "full_name": "",
+        "group": "",
+        "selected_program": "Компас 3D"
+    },
+    "is_first_launch": true,
+    "available_programs": [
+        "Компас 3D"
+    ]
+} 

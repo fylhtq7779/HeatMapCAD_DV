@@ -16,10 +16,11 @@
   },
   "network": {
     "github": {
-      "token": "",
-      "repo": "fylhtq7779/HeatMapCAD_DV"
+      "repo": "fylhtq7779/HeatMapCAD_DV",
+      "branch": "gh-pages",
+      "data_directory": "data"
     },
-    "auto_upload": false,
+    "auto_upload": true,
     "sync_interval": 300
   },
   "updates": {

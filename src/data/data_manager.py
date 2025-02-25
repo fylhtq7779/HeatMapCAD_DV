@@ -17,10 +17,19 @@ class DataManager:
         if not os.path.exists(self.storage_dir):
             os.makedirs(self.storage_dir)
 
+    def _get_full_path(self, filename: str) -> str:
+        """Получить полный путь к файлу."""
+        # Если путь уже содержит storage_dir, возвращаем как есть
+        if os.path.dirname(filename) == self.storage_dir:
+            return filename
+        # Иначе добавляем storage_dir
+        return os.path.join(self.storage_dir, filename)
+
     def save_tracking_data(self, data: List[tuple], resolution: tuple) -> str:
         """Сохранить данные трекинга в файл."""
         current_time = datetime.now().strftime("%Y-%m-%d_%H-%M")
-        filename = os.path.join(self.storage_dir, f"track_{current_time}.json")
+        filename = f"track_{current_time}.json"
+        filepath = self._get_full_path(filename)
 
         # Преобразуем datetime объекты в строки
         formatted_data = [
@@ -39,14 +48,14 @@ class DataManager:
             }
         }
 
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(track_data, f, ensure_ascii=False, indent=2)
 
-        return filename
+        return filename  # Возвращаем только имя файла без пути
 
     def load_tracking_data(self, filename: str) -> Dict[str, Any]:
         """Загрузить данные трекинга из файла."""
-        filepath = os.path.join(self.storage_dir, filename)
+        filepath = self._get_full_path(filename)
         
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Файл {filepath} не найден")
@@ -70,7 +79,7 @@ class DataManager:
 
     def delete_tracking_file(self, filename: str) -> None:
         """Удалить файл с данными трекинга."""
-        filepath = os.path.join(self.storage_dir, filename)
+        filepath = self._get_full_path(filename)
         if os.path.exists(filepath):
             os.remove(filepath)
 
