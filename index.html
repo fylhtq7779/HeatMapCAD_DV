@@ -6,6 +6,52 @@
     <title>HeatMapCAD - Тепловые карты для КОМПАС-3D</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        #heatmap-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        #heatmap-list {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .heatmap-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .heatmap-item:hover {
+            background: #eee;
+        }
+        #visualization {
+            width: 100%;
+            height: 600px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -34,21 +80,10 @@
         <section id="heatmaps" class="heatmaps">
             <div class="container">
                 <h2>Загруженные тепловые карты</h2>
-                <div class="heatmap-list"></div>
-                <div class="heatmap-viewer">
-                    <div class="heatmap-container">
-                        <div id="heatmapArea"></div>
-                    </div>
-                    <div class="heatmap-controls">
-                        <label>
-                            Яркость:
-                            <input type="range" id="brightness" min="0" max="1" step="0.1" value="0.8">
-                        </label>
-                        <label>
-                            Радиус:
-                            <input type="range" id="radius" min="10" max="50" step="1" value="25">
-                        </label>
-                    </div>
+                <div id="heatmap-list"></div>
+                <div id="heatmap-container">
+                    <h2>Визуализация</h2>
+                    <canvas id="visualization"></canvas>
                 </div>
             </div>
         </section>
@@ -100,7 +135,7 @@ pip install -r requirements.txt</code></pre>
     <script>
         // Инициализация тепловой карты
         const heatmapInstance = h337.create({
-            container: document.getElementById('heatmapArea'),
+            container: document.getElementById('visualization'),
             radius: 25,
             maxOpacity: 0.8,
             minOpacity: 0
@@ -109,35 +144,35 @@ pip install -r requirements.txt</code></pre>
         // Загрузка списка тепловых карт
         async function loadHeatmapList() {
             try {
-                const response = await fetch('data/heatmaps.json');
-                const heatmaps = await response.json();
+                const response = await fetch('data/index.html');
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = doc.querySelectorAll('a');
+                const container = document.getElementById('list-container');
                 
-                const listElement = document.querySelector('.heatmap-list');
-                listElement.innerHTML = '';
-                
-                heatmaps.forEach(heatmap => {
-                    const item = document.createElement('div');
-                    item.className = 'heatmap-item';
-                    const date = new Date(heatmap.created);
-                    item.innerHTML = `
-                        <h3>${heatmap.name}</h3>
-                        <p>Создано: ${date.toLocaleString()}</p>
-                        <button onclick="loadHeatmap('${heatmap.id}')">Показать</button>
-                    `;
-                    listElement.appendChild(item);
+                links.forEach(link => {
+                    if (link.href.endsWith('.html')) {
+                        const div = document.createElement('div');
+                        div.className = 'heatmap-item';
+                        div.textContent = link.textContent;
+                        div.onclick = () => loadHeatmap(link.href);
+                        container.appendChild(div);
+                    }
                 });
             } catch (error) {
-                console.error('Error loading heatmap list:', error);
-                const listElement = document.querySelector('.heatmap-list');
-                listElement.innerHTML = '<p class="error">Нет доступных тепловых карт</p>';
+                console.error('Ошибка загрузки списка:', error);
             }
         }
 
         // Загрузка и отображение тепловой карты
-        async function loadHeatmap(id) {
+        async function loadHeatmap(url) {
             try {
-                const response = await fetch(`data/maps/${id}.json`);
-                const data = await response.json();
+                const response = await fetch(url);
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const data = JSON.parse(doc.getElementById('heatmap-data').textContent);
                 
                 // Преобразуем данные в формат heatmap.js
                 const points = data.positions.map(([x, y]) => ({
@@ -147,7 +182,7 @@ pip install -r requirements.txt</code></pre>
                 }));
 
                 // Устанавливаем размеры контейнера
-                const container = document.getElementById('heatmapArea');
+                const container = document.getElementById('visualization');
                 container.style.width = `${data.resolution.width}px`;
                 container.style.height = `${data.resolution.height}px`;
 
@@ -157,8 +192,7 @@ pip install -r requirements.txt</code></pre>
                     data: points
                 });
             } catch (error) {
-                console.error('Error loading heatmap:', error);
-                alert('Ошибка загрузки тепловой карты');
+                console.error('Ошибка загрузки тепловой карты:', error);
             }
         }
 
