@@ -12,6 +12,12 @@ class NetworkClient:
     """Класс для сетевого взаимодействия."""
 
     def __init__(self, config: Dict[str, Any]):
+        """
+        Инициализация клиента.
+        
+        Args:
+            config: Конфигурация сетевого взаимодействия
+        """
         self.config = config
         self.server_url = config.get('server_url', '')
         self.auto_upload = config.get('auto_upload', False)
@@ -25,14 +31,21 @@ class NetworkClient:
         self.github_branch = github_config.get('branch', 'gh-pages')
         self.data_path = github_config.get('data_directory', 'data')
 
-    def _datetime_to_str(self, obj: Any) -> Any:
-        """Конвертировать datetime в строку."""
+    def _datetime_to_str(self, obj: Any) -> str:
+        """Преобразовать datetime в строку."""
         if isinstance(obj, datetime):
             return obj.isoformat()
-        return obj
+        raise TypeError(f'Object of type {type(obj)} is not JSON serializable')
 
-    def upload_to_github_pages(self, data: Dict[str, Any], filename: str) -> bool:
-        """Загрузить данные на GitHub Pages."""
+    def upload_to_github_pages(self, data: Dict[str, Any], filename: str, user_data: Dict[str, Any]) -> bool:
+        """
+        Загрузить данные на GitHub Pages.
+        
+        Args:
+            data: Данные для загрузки
+            filename: Имя файла
+            user_data: Информация о пользователе
+        """
         if not self.github_repo:
             return False
 
@@ -40,6 +53,13 @@ class NetworkClient:
             # Создаем уникальное имя файла с временной меткой
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             json_filename = f"{filename}_{timestamp}.json"
+            
+            # Добавляем информацию о пользователе в данные
+            data['user'] = {
+                'fullname': user_data.get('fullname', ''),
+                'group': user_data.get('group', ''),
+                'program': user_data.get('program', 'Компас 3D')
+            }
             
             # Преобразуем данные в JSON с обработкой datetime
             json_data = json.dumps(data, ensure_ascii=False, indent=2, default=self._datetime_to_str)
@@ -79,25 +99,35 @@ class NetworkClient:
             with open(html_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             
-            # Отправляем файлы на GitHub Pages через API
-            repo_parts = self.github_repo.split('/')
-            if len(repo_parts) != 2:
-                raise ValueError("Неверный формат репозитория. Должно быть: username/repo")
+            # Обновляем index.json
+            index_path = os.path.join(self.data_path, 'index.json')
+            index_data = {"heatmaps": []}
             
-            owner, repo = repo_parts
-            base_url = f"https://{owner}.github.io/{repo}"
+            if os.path.exists(index_path):
+                try:
+                    with open(index_path, 'r', encoding='utf-8') as f:
+                        index_data = json.load(f)
+                except:
+                    pass
             
-            # Создаем index.html со списком всех карт
-            index_content = self._create_index_html()
-            index_path = os.path.join(self.data_path, "index.html")
+            # Добавляем информацию о новой карте
+            index_data['heatmaps'].append({
+                'date': datetime.now().isoformat(),
+                'user_fullname': user_data.get('fullname', ''),
+                'user_group': user_data.get('group', ''),
+                'program': user_data.get('program', 'Компас 3D'),
+                'html_file': html_filename,
+                'json_file': json_filename
+            })
+            
+            # Сохраняем обновленный index.json
             with open(index_path, 'w', encoding='utf-8') as f:
-                f.write(index_content)
+                json.dump(index_data, f, ensure_ascii=False, indent=2)
             
-            print(f"Данные сохранены локально и доступны по адресу: {base_url}/data/{html_filename}")
             return True
             
         except Exception as e:
-            print(f"Ошибка загрузки данных на GitHub Pages: {e}")
+            print(f"Ошибка при загрузке на GitHub Pages: {e}")
             return False
 
     def _create_index_html(self) -> str:
@@ -182,7 +212,7 @@ class NetworkClient:
         
         # Загружаем на GitHub Pages
         filename = f"heatmap"
-        if not self.upload_to_github_pages(data, filename):
+        if not self.upload_to_github_pages(data, filename, data['user']):
             success = False
             print("Ошибка загрузки на GitHub Pages")
         

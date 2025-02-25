@@ -23,7 +23,8 @@ class MainWindow:
         mouse_tracker: MouseTracker,
         visualizer: HeatmapVisualizer,
         data_manager: DataManager,
-        network_client: NetworkClient
+        network_client: NetworkClient,
+        user_data: Dict[str, Any]
     ):
         # Сохраняем ссылки на объекты
         self.root = root
@@ -32,6 +33,7 @@ class MainWindow:
         self.visualizer = visualizer
         self.data_manager = data_manager
         self.network_client = network_client
+        self.user_data = user_data
 
         # Настройка главного окна
         window_size = self.config.get('ui.window_size', [1200, 800])
@@ -347,7 +349,7 @@ class MainWindow:
                 repo_name=self.config.get('network.github.repo')
             )
             
-            metadata = client.upload_heatmap(file_path)
+            metadata = client.upload_heatmap(file_path, self.user_data)
             url = client.get_heatmap_url(metadata['id'])
             
             messagebox.showinfo(

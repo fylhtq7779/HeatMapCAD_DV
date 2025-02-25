@@ -21,12 +21,13 @@ class GitHubClient:
         self.github = Github(token)
         self.repo: Repository = self.github.get_repo(repo_name)
 
-    def upload_heatmap(self, file_path: str) -> Dict[str, Any]:
+    def upload_heatmap(self, file_path: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Загрузить тепловую карту на GitHub Pages.
         
         Args:
             file_path: Путь к JSON файлу с данными
+            user_data: Информация о пользователе
         
         Returns:
             Dict с информацией о загруженной карте
@@ -38,32 +39,70 @@ class GitHubClient:
         # Генерируем уникальный ID для карты
         heatmap_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # Добавляем информацию о пользователе
+        data['user'] = {
+            'fullname': user_data.get('fullname', ''),
+            'group': user_data.get('group', ''),
+            'program': user_data.get('program', 'Компас 3D')
+        }
+        
         # Создаем метаданные для карты
         metadata = {
             "id": heatmap_id,
             "name": os.path.basename(file_path),
             "created": datetime.now().isoformat(),
-            "resolution": data['resolution']
+            "resolution": data['resolution'],
+            "user": data['user']
         }
 
         try:
             # Получаем текущий список карт
             try:
-                heatmaps_content = self.repo.get_contents(
-                    "data/heatmaps.json",
+                index_content = self.repo.get_contents(
+                    "data/index.json",
                     ref="gh-pages"
                 )
-                heatmaps_data = json.loads(base64.b64decode(heatmaps_content.content))
+                index_data = json.loads(base64.b64decode(index_content.content))
             except:
-                heatmaps_data = {"heatmaps": []}
+                index_data = {"heatmaps": []}
 
             # Добавляем новую карту в список
-            heatmaps_data["heatmaps"].append(metadata)
+            index_data["heatmaps"].append({
+                "id": heatmap_id,
+                "date": metadata['created'],
+                "user_fullname": user_data.get('fullname', ''),
+                "user_group": user_data.get('group', ''),
+                "program": user_data.get('program', 'Компас 3D'),
+                "html_file": f"maps/{heatmap_id}.html",
+                "json_file": f"maps/{heatmap_id}.json"
+            })
+
+            # Создаем HTML файл
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Тепловая карта - {user_data.get('fullname', '')}</title>
+                <script type="application/json" id="heatmap-data">
+                {json.dumps(data, ensure_ascii=False, indent=2)}
+                </script>
+            </head>
+            <body>
+                <div id="heatmap-container"></div>
+                <script>
+                    // Данные будут доступны через document.getElementById('heatmap-data').textContent
+                    console.log('HeatMap data loaded');
+                </script>
+            </body>
+            </html>
+            """
 
             # Создаем новые файлы
             files = {
-                "data/heatmaps.json": json.dumps(heatmaps_data, indent=2),
-                f"data/maps/{heatmap_id}.json": json.dumps(data, indent=2)
+                "data/index.json": json.dumps(index_data, indent=2, ensure_ascii=False),
+                f"data/maps/{heatmap_id}.json": json.dumps(data, indent=2, ensure_ascii=False),
+                f"data/maps/{heatmap_id}.html": html_content
             }
 
             # Получаем текущее дерево
@@ -85,7 +124,7 @@ class GitHubClient:
             # Создаем новое дерево и коммит
             new_tree = self.repo.create_git_tree(tree_elements, tree)
             new_commit = self.repo.create_git_commit(
-                f"Добавлена тепловая карта {heatmap_id}",
+                f"Добавлена тепловая карта от {user_data.get('fullname', '')} ({heatmap_id})",
                 new_tree,
                 [commit]
             )
@@ -100,4 +139,4 @@ class GitHubClient:
 
     def get_heatmap_url(self, heatmap_id: str) -> str:
         """Получить URL тепловой карты."""
-        return f"https://fylhtq7779.github.io/HeatMapCAD_DV/data/maps/{heatmap_id}.json" 
+        return f"https://fylhtq7779.github.io/HeatMapCAD_DV/data/maps/{heatmap_id}.html" 
