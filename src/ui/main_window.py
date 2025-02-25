@@ -79,8 +79,8 @@ class MainWindow:
         self.canvas_widget = self.canvas.get_tk_widget()
         self.canvas_widget.pack(fill=tk.BOTH, expand=1, padx=2, pady=2)
 
-        # Создание панели настроек
-        self.settings_frame = ttkb.Frame(self.main_frame, width=300)
+        # Создание панели настроек с фиксированной шириной
+        self.settings_frame = ttkb.Frame(self.main_frame, width=350)  # Увеличиваем ширину
         self.settings_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
         self.settings_frame.pack_propagate(False)  # Запрещаем изменение размера
 
@@ -89,6 +89,7 @@ class MainWindow:
         self.create_track_selector()
         self.create_visualization_controls()
         self.create_save_button()
+        self.create_user_info_panel()  # Добавляем панель с информацией о пользователе
 
         # Обновление списка треков
         self.update_track_list()
@@ -342,19 +343,18 @@ class MainWindow:
         file_path = os.path.join(self.data_manager.storage_dir, selected_file)
 
         try:
-            from network.github_client import GitHubClient
+            # Загружаем данные трека
+            track_data = self.data_manager.load_tracking_data(selected_file)
             
-            client = GitHubClient(
-                token=self.config.get('network.github.token'),
-                repo_name=self.config.get('network.github.repo')
-            )
+            # Добавляем информацию о пользователе
+            track_data['user'] = self.user_data
             
-            metadata = client.upload_heatmap(file_path, self.user_data)
-            url = client.get_heatmap_url(metadata['id'])
+            # Загружаем на GitHub
+            self.network_client.upload_tracking_data(track_data)
             
             messagebox.showinfo(
                 "Успех",
-                f"Тепловая карта опубликована!\nID: {metadata['id']}\nURL: {url}"
+                "Тепловая карта успешно опубликована на сайте!"
             )
 
         except Exception as e:
@@ -362,6 +362,41 @@ class MainWindow:
                 "Ошибка",
                 f"Не удалось загрузить данные: {str(e)}"
             )
+
+    def create_user_info_panel(self) -> None:
+        """Создание панели с информацией о пользователе."""
+        # Создаем рамку для информации о пользователе
+        user_frame = ttkb.LabelFrame(
+            self.settings_frame,
+            text="Информация о пользователе",
+            padding=10,
+            bootstyle="info"
+        )
+        user_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
+
+        # ФИО
+        ttkb.Label(
+            user_frame,
+            text=f"ФИО: {self.user_data.get('fullname', '')}",
+            wraplength=300,
+            justify=tk.LEFT
+        ).pack(anchor=tk.W, pady=2)
+
+        # Группа
+        ttkb.Label(
+            user_frame,
+            text=f"Группа: {self.user_data.get('group', '')}",
+            wraplength=300,
+            justify=tk.LEFT
+        ).pack(anchor=tk.W, pady=2)
+
+        # Программа
+        ttkb.Label(
+            user_frame,
+            text=f"Программа: {self.user_data.get('selected_program', '')}",
+            wraplength=300,
+            justify=tk.LEFT
+        ).pack(anchor=tk.W, pady=2)
 
     def _on_close(self) -> None:
         """Обработчик закрытия окна."""

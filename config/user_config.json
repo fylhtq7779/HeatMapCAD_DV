@@ -1,11 +1,11 @@
 {
     "user": {
-        "full_name": "",
-        "group": "",
+        "fullname": "Гуськов Андрей Андреевич",
+        "group": "221-325",
         "selected_program": "Компас 3D"
     },
-    "is_first_launch": true,
+    "is_first_launch": false,
     "available_programs": [
         "Компас 3D"
     ]
-} 
+}

@@ -1,0 +1,20 @@
+{
+  "heatmaps": [
+    {
+      "date": "2025-02-25T11:36:25.359345",
+      "user_fullname": "Гуськов Андрей Андреевич",
+      "user_group": "221-325",
+      "program": "Компас 3D",
+      "html_file": "heatmap_20250225_113625.html",
+      "json_file": "heatmap_20250225_113625.json"
+    },
+    {
+      "date": "2025-02-25T11:43:15.916895",
+      "user_fullname": "Гуськов Андрей Андреевич",
+      "user_group": "221-325",
+      "program": "Компас 3D",
+      "html_file": "heatmap_20250225_114315.html",
+      "json_file": "heatmap_20250225_114315.json"
+    }
+  ]
+}
