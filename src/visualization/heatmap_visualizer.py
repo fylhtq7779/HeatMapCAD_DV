@@ -82,61 +82,50 @@ class HeatmapVisualizer(BaseVisualizer):
             self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     def render(self) -> np.ndarray:
-        """Рендерит текущую тепловую карту и возвращает изображение."""
+        """Отрендерить тепловую карту."""
         try:
-            # Если есть фоновое изображение и данные хитмапа
-            if hasattr(self, 'background_image') and self.positions:
-                # Если фон - пустой массив, создаем его
-                if self.background_image is None:
-                    self._update_figure_size()
-                    # Создаем пустой фон
-                    self.background_image = np.ones((self.background_image.shape[0], self.background_image.shape[1], 3), dtype=np.uint8) * 255
-                
-                # Рассчитываем данные для тепловой карты
-                heatmap, extent = self._calculate_heatmap()
-                
-                # Очищаем предыдущий график
+            # Обновляем размер фигуры
+            self._update_figure_size()
+            
+            # Очищаем оси только если нужно
+            if not self._background_image_shown or self.background_image is not None:
                 self.ax.clear()
-                
-                # Отображаем фоновое изображение
-                self.ax.imshow(self.background_image, aspect='auto')
-                
-                # Отображаем тепловую карту поверх
-                self.heatmap = self.ax.imshow(
-                    heatmap, 
-                    alpha=0.6, 
-                    cmap=self.config['colormap'],
-                    extent=extent,
-                    interpolation='bilinear',
-                    aspect='auto'
-                )
-                
-                # Убираем оси
                 self.ax.axis('off')
-                
-                # Добавляем цветовую шкалу, если требуется
-                if self.show_colorbar:
-                    if hasattr(self, 'colorbar'):
-                        self.colorbar.remove()
-                    self.colorbar = self.fig.colorbar(
-                        self.heatmap, 
-                        ax=self.ax, 
-                        orientation='vertical',
-                        fraction=0.05,
-                        pad=0.01
-                    )
-                    
+                if self.background_image is not None:
+                    # Отображаем фоновое изображение с правильным центрированием
+                    self.ax.imshow(self.background_image, extent=[0, self.background_image.shape[1], 
+                                                                  self.background_image.shape[0], 0])
                     # Устанавливаем границы осей точно по размеру изображения
-                    if self.background_image is not None:
-                        self.ax.set_xlim(0, self.background_image.shape[1])
-                        self.ax.set_ylim(self.background_image.shape[0], 0)
+                    self.ax.set_xlim(0, self.background_image.shape[1])
+                    self.ax.set_ylim(self.background_image.shape[0], 0)
+                self._background_image_shown = True
 
+            # Если есть позиции, создаем или используем кэшированную тепловую карту
+            if self.positions:
+                if self._cached_heatmap is None:
+                    self._cached_heatmap, self._cached_extent = self._calculate_heatmap()
+                
+                if self._cached_heatmap is not None:
+                    # Удаляем предыдущую тепловую карту, если она есть
+                    for im in self.ax.images[1:]:
+                        im.remove()
+                    
+                    # Отображаем новую тепловую карту
+                    self.ax.imshow(
+                        self._cached_heatmap,
+                        extent=self._cached_extent,
+                        origin='upper',
+                        cmap=self.config['colormap'],
+                        alpha=self._cached_heatmap
+                    )
+            
             # Обновляем холст
             self.fig.canvas.draw()
             
             # Получаем размеры холста
             width, height = self.fig.canvas.get_width_height()
             
+            # Получаем данные изображения
             try:
                 # Пробуем новый метод (для новых версий matplotlib)
                 buf = self.fig.canvas.buffer_rgba()
@@ -144,29 +133,17 @@ class HeatmapVisualizer(BaseVisualizer):
                 # Конвертируем RGBA в RGB
                 data = data[:, :, :3]
             except (AttributeError, TypeError):
-                try:
-                    # Пробуем старый метод (для старых версий matplotlib)
-                    data = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
-                    expected_size = width * height * 3
-                    
-                    # Проверяем соответствие размеров
-                    if len(data) != expected_size:
-                        # Если размеры не совпадают, масштабируем данные
-                        data = data[:expected_size]
-                    
-                    # Преобразуем в нужную форму
-                    data = data.reshape(height, width, 3)
-                except Exception as inner_e:
-                    print(f"Ошибка при обработке данных изображения: {inner_e}")
-                    # Третий вариант - использование renderer
-                    from matplotlib.backends.backend_agg import FigureCanvasAgg
-                    canvas = FigureCanvasAgg(self.fig)
-                    canvas.draw()
-                    renderer = canvas.get_renderer()
-                    raw_data = renderer.buffer_rgba()
-                    data = np.frombuffer(raw_data, dtype=np.uint8).reshape((height, width, 4))
-                    # Конвертируем RGBA в RGB
-                    data = data[:, :, :3]
+                # Пробуем старый метод (для старых версий matplotlib)
+                data = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+                expected_size = width * height * 3
+                
+                # Проверяем соответствие размеров
+                if len(data) != expected_size:
+                    # Если размеры не совпадают, масштабируем данные
+                    data = data[:expected_size]
+                
+                # Преобразуем в нужную форму
+                data = data.reshape(height, width, 3)
             
             return data
             
