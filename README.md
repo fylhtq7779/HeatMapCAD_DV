@@ -25,7 +25,7 @@
 
 ### Для обычных пользователей (рекомендуется)
 
-1. Скачайте архив `HeatMapCAD_Portable.zip` с [официального сайта](https://heatmapcad.ru/download) или из раздела [Releases](https://github.com/fylhtq7779/HeatMapCAD_DV/releases)
+1. Скачайте архив `HeatMapCAD_Portable_20250226.zip` из раздела [Releases](https://github.com/fylhtq7779/HeatMapCAD_DV/releases/tag/v1.0.0)
 2. Распакуйте архив в любую директорию
 3. Запустите:
    - В Windows: запустите `launch_heatmap.py` с помощью Python
