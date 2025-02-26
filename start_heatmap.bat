@@ -3,6 +3,22 @@ chcp 65001 > nul
 echo Запуск HeatMapCAD...
 echo.
 
+REM Путь к маркерному файлу для определения первого запуска
+set FIRST_RUN_MARKER=.first_run_completed
+
+REM Параметр для скрытого запуска
+set SILENT_MODE=%1
+
+REM Проверяем, существует ли маркерный файл (первый запуск завершен)
+if exist "%FIRST_RUN_MARKER%" (
+    set FIRST_RUN=0
+) else (
+    set FIRST_RUN=1
+)
+
+REM Если это не первый запуск и запрошен скрытый режим, переходим к скрытому запуску
+if "%FIRST_RUN%"=="0" if "%SILENT_MODE%"=="silent" goto SILENT_LAUNCH
+
 REM Создаем файл для отладки
 echo Начало отладки > debug_launch.log
 echo Время: %date% %time% >> debug_launch.log
@@ -136,8 +152,13 @@ echo Запуск приложения... >> debug_launch.log
 echo Запуск команды: %PYTHON_CMD% -u launch_heatmap.py
 echo Запуск команды: %PYTHON_CMD% -u launch_heatmap.py >> debug_launch.log
 
-REM Запускаем Python с опцией -u для отключения буферизации вывода
-%PYTHON_CMD% -u launch_heatmap.py
+REM Сохраняем вывод Python в переменную, чтобы проверить на маркер первого запуска
+set FIRST_RUN_COMPLETED=0
+for /f "tokens=*" %%a in ('%PYTHON_CMD% -u launch_heatmap.py') do (
+    echo %%a
+    if "%%a"=="[FIRST_RUN_COMPLETED]" set FIRST_RUN_COMPLETED=1
+)
+
 if %ERRORLEVEL% NEQ 0 (
     echo Произошла ошибка при запуске приложения (код %ERRORLEVEL%)
     echo Произошла ошибка при запуске приложения (код %ERRORLEVEL%) >> debug_launch.log
@@ -149,4 +170,26 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo Приложение успешно запущено
 echo Приложение успешно запущено >> debug_launch.log
+
+REM Если это был первый запуск и он успешно завершен, предлагаем нажать любую клавишу
+if "%FIRST_RUN%"=="1" if "%FIRST_RUN_COMPLETED%"=="1" (
+    echo.
+    echo Первый запуск успешно завершен. При следующем запуске консоль не будет отображаться.
+    echo.
+    echo Создаем ярлык для бесшумного запуска...
+    
+    REM Создаем ярлык для скрытого запуска
+    echo @echo off > HeatMapCAD.bat
+    echo start "" /b cmd /c "start_heatmap.bat silent" >> HeatMapCAD.bat
+    
+    echo Ярлык HeatMapCAD.bat создан в текущей директории.
+    echo.
+    pause
+)
+
+exit /b 0
+
+:SILENT_LAUNCH
+REM Скрытый запуск приложения для последующих запусков
+%PYTHON_CMD% -u launch_heatmap.py > nul 2>&1
 exit /b 0 

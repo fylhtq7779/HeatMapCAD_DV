@@ -13,6 +13,9 @@ import time
 import traceback
 import platform
 
+# Путь к маркерному файлу для определения первого запуска
+first_run_marker = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".first_run_completed")
+
 # Создаем отладочный лог-файл
 debug_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "python_debug.log")
 def log_debug(message):
@@ -32,6 +35,23 @@ def log_debug(message):
                 f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - [ALTERNATE LOG] {message}\n")
         except Exception as e:
             print(f"[HeatMapCAD] Не удалось записать в лог: {e}")
+
+# Функция для проверки, является ли это первым запуском
+def is_first_run():
+    """Проверяет, является ли это первым запуском приложения."""
+    return not os.path.exists(first_run_marker)
+
+# Функция для создания маркера первого запуска
+def mark_first_run_completed():
+    """Создает маркерный файл, указывающий, что первый запуск успешно завершен."""
+    try:
+        with open(first_run_marker, "w", encoding="utf-8") as f:
+            f.write(f"Первый запуск успешно завершен: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        log_debug("Создан маркер успешного первого запуска")
+        return True
+    except Exception as e:
+        log_debug(f"Ошибка при создании маркера первого запуска: {e}")
+        return False
 
 # Записываем начальную информацию
 log_debug("=" * 50)
@@ -261,6 +281,13 @@ def main():
     print("Запуск HeatMapCAD")
     print("=" * 50)
     
+    # Проверяем, первый ли это запуск
+    first_run = is_first_run()
+    if first_run:
+        log_debug("Обнаружен первый запуск приложения")
+    else:
+        log_debug("Обнаружен повторный запуск приложения")
+    
     # Создаем лог-файл для записи ошибок
     log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "launch_log.txt")
     log_debug("Создан лог-файл: " + log_file)
@@ -314,6 +341,13 @@ def main():
             return 1
         
         log_debug("Приложение успешно запущено и завершено")
+        
+        # Если это был первый запуск, создаем маркер успешного запуска
+        if first_run:
+            mark_first_run_completed()
+            # Сообщаем батнику, что это был первый запуск и установка прошла успешно
+            print("[FIRST_RUN_COMPLETED]")
+        
         return 0
     
     except Exception as e:
