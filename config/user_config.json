@@ -1,5 +1,9 @@
 {
-    "user": {},
+    "user": {
+        "fullname": "Тест тестов",
+        "group": "232",
+        "selected_program": "Компас 3D"
+    },
     "is_first_launch": true,
     "available_programs": [
         "Компас 3D"

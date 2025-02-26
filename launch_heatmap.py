@@ -12,7 +12,6 @@ import subprocess
 import time
 import traceback
 import platform
-import argparse  # Добавляем импорт для обработки аргументов командной строки
 
 # Путь к маркерному файлу для определения первого запуска
 first_run_marker = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".first_run_completed")
@@ -61,11 +60,6 @@ log_debug(f"Python: {sys.version}")
 log_debug(f"Путь к Python: {sys.executable}")
 log_debug(f"Рабочая директория: {os.getcwd()}")
 log_debug(f"Директория скрипта: {os.path.dirname(os.path.abspath(__file__))}")
-
-# Разбор аргументов командной строки
-parser = argparse.ArgumentParser(description="Запуск HeatMapCAD")
-parser.add_argument('--install-only', action='store_true', help='Только установка окружения и зависимостей без запуска приложения')
-args = parser.parse_args()
 
 # Проверяем наличие модуля venv
 try:
@@ -282,15 +276,25 @@ def run_application(venv_dir):
         return False
 
 def main():
-    """Основная функция для настройки и запуска приложения."""
+    """Основная функция."""
+    print("=" * 50)
+    print("Запуск HeatMapCAD")
+    print("=" * 50)
+    
+    # Проверяем, первый ли это запуск
+    first_run = is_first_run()
+    if first_run:
+        log_debug("Обнаружен первый запуск приложения")
+    else:
+        log_debug("Обнаружен повторный запуск приложения")
+    
+    # Создаем лог-файл для записи ошибок
+    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "launch_log.txt")
+    log_debug("Создан лог-файл: " + log_file)
+    
     try:
-        first_run = is_first_run()
-        log_debug(f"Первый запуск: {first_run}")
-        
-        # Создаем лог-файл на каждый запуск (для отладки)
-        log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"launch_log_{time.strftime('%Y%m%d_%H%M%S')}.txt")
         with open(log_file, "w", encoding="utf-8") as f:
-            f.write(f"Время запуска: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Запуск HeatMapCAD: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Python: {sys.version}\n")
             f.write(f"Путь к Python: {sys.executable}\n")
             f.write(f"Рабочая директория: {os.getcwd()}\n")
@@ -328,11 +332,6 @@ def main():
             log_debug("Ошибка: Не удалось установить зависимости")
             input("Нажмите Enter для выхода...")
             return 1
-            
-        # Если указан параметр --install-only, завершаем работу после установки зависимостей
-        if args.install_only:
-            log_debug("Установка зависимостей завершена. Параметр --install-only указан, приложение не запускается.")
-            return 0
         
         # Запускаем приложение
         if not run_application(venv_dir):
