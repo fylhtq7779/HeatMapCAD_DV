@@ -66,6 +66,16 @@ class MouseTracker(InputTracker):
 
         current_time = time.time()
         
+        # Нормализуем координаты, чтобы избежать отрицательных значений
+        x = max(0, x)
+        y = max(0, y)
+        
+        # Проверяем, что координаты не выходят за пределы экрана
+        if self.screen_resolution:
+            width, height = self.screen_resolution
+            x = min(x, width - 1)
+            y = min(y, height - 1)
+        
         # Проверяем интервал обновления и расстояние
         if (current_time - self.last_update_time >= self.update_interval and 
             self._calculate_distance(x, y, self.last_x, self.last_y) >= self.min_distance):
