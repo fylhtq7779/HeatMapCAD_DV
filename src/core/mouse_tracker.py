@@ -31,10 +31,35 @@ class MouseTracker(InputTracker):
         if self.is_tracking:
             return
 
+        print("Начинаем отслеживание мыши...")
+        
         # Получаем скриншот и разрешение экрана
-        screenshot = pyautogui.screenshot()
-        self.screenshot = np.array(screenshot)
-        self.screen_resolution = (self.screenshot.shape[1], self.screenshot.shape[0])
+        try:
+            print("Пытаемся создать скриншот...")
+            screenshot = pyautogui.screenshot()
+            print(f"Скриншот успешно создан, размер: {screenshot.width}x{screenshot.height}")
+            
+            self.screenshot = np.array(screenshot)
+            print(f"Преобразование в numpy массив: форма {self.screenshot.shape}, тип {self.screenshot.dtype}")
+            
+            self.screen_resolution = (self.screenshot.shape[1], self.screenshot.shape[0])
+            print(f"Установлено разрешение экрана: {self.screen_resolution}")
+        except Exception as e:
+            print(f"ОШИБКА при создании скриншота: {e}")
+            print("Попытка создать пустой скриншот...")
+            try:
+                # Создаем пустой скриншот если не удалось сделать настоящий
+                width, height = pyautogui.size()
+                print(f"Размер экрана по pyautogui.size(): {width}x{height}")
+                self.screenshot = np.zeros((height, width, 3), dtype=np.uint8)
+                self.screen_resolution = (width, height)
+                print(f"Создан пустой скриншот: {self.screenshot.shape}")
+            except Exception as e2:
+                print(f"КРИТИЧЕСКАЯ ОШИБКА при создании пустого скриншота: {e2}")
+                # Установка предполагаемого разрешения
+                self.screenshot = np.zeros((1080, 1920, 3), dtype=np.uint8)
+                self.screen_resolution = (1920, 1080)
+                print("Установлен аварийный пустой скриншот 1920x1080")
 
         # Очищаем предыдущие данные
         self.clear_data()
@@ -48,6 +73,7 @@ class MouseTracker(InputTracker):
         self.listener = mouse.Listener(on_move=self._on_move)
         self.listener.start()
         self.is_tracking = True
+        print("Отслеживание мыши запущено")
         
         # Уведомляем слушателей о начале отслеживания
         self.notify_listeners("tracking_started", {
