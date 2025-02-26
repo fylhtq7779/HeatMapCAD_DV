@@ -27,6 +27,8 @@ def create_portable_archive():
         "launch_heatmap.py",
         "start_heatmap.sh",
         "start_heatmap.bat",
+        "install_environment.bat",
+        "run_heatmap.bat",
         "requirements.txt",
         "README.md.portable",
         "SUMMARY.md.portable",
