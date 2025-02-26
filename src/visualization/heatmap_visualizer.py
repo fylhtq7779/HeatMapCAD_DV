@@ -30,6 +30,9 @@ class HeatmapVisualizer(BaseVisualizer):
         self._background_image_shown = False
         self._last_window_size = None
         
+        # Добавляем атрибут show_colorbar
+        self.show_colorbar = False
+        
         # Улучшаем отображение
         self.fig.tight_layout(pad=0)
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
@@ -116,13 +119,17 @@ class HeatmapVisualizer(BaseVisualizer):
                 
                 if self._cached_heatmap is not None:
                     # Отображаем тепловую карту поверх фона
-                    self.ax.imshow(
+                    heatmap_img = self.ax.imshow(
                         self._cached_heatmap,
                         extent=self._cached_extent,
                         origin='upper',
                         cmap=self.config['colormap'],
                         alpha=self._cached_heatmap
                     )
+                    
+                    # Добавляем цветовую шкалу если нужно
+                    if self.show_colorbar:
+                        self.fig.colorbar(heatmap_img, ax=self.ax)
             
             # Обновляем холст
             self.fig.canvas.draw()
@@ -132,23 +139,31 @@ class HeatmapVisualizer(BaseVisualizer):
             
             # Получаем данные изображения
             try:
-                # Пробуем новый метод (для новых версий matplotlib)
+                # Для новых версий matplotlib (3.5+)
                 buf = self.fig.canvas.buffer_rgba()
                 data = np.asarray(buf)
                 # Конвертируем RGBA в RGB
                 data = data[:, :, :3]
             except (AttributeError, TypeError):
-                # Пробуем старый метод (для старых версий matplotlib)
-                data = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
-                expected_size = width * height * 3
-                
-                # Проверяем соответствие размеров
-                if len(data) != expected_size:
-                    # Если размеры не совпадают, масштабируем данные
-                    data = data[:expected_size]
-                
-                # Преобразуем в нужную форму
-                data = data.reshape(height, width, 3)
+                try:
+                    # Для версий matplotlib 3.1 - 3.4
+                    data = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+                    expected_size = width * height * 3
+                    
+                    # Проверяем соответствие размеров
+                    if len(data) != expected_size:
+                        # Если размеры не совпадают, масштабируем данные
+                        data = data[:expected_size]
+                    
+                    # Преобразуем в нужную форму
+                    data = data.reshape(height, width, 3)
+                except Exception as e:
+                    print(f"Ошибка при получении данных изображения: {e}")
+                    # Последняя попытка - использовать устаревший метод
+                    from matplotlib.backends.backend_agg import FigureCanvasAgg
+                    canvas = FigureCanvasAgg(self.fig)
+                    canvas.draw()
+                    data = np.array(canvas.renderer.buffer_rgba())[:, :, :3]
             
             return data
             
