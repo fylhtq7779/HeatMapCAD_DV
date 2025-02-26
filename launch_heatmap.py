@@ -3,7 +3,7 @@
 
 """
 Скрипт для запуска HeatMapCAD.
-Автоматически устанавливает необходимые зависимости и запускает приложение.
+Автоматически создает виртуальное окружение, устанавливает необходимые зависимости и запускает приложение.
 """
 
 import os
@@ -11,6 +11,8 @@ import sys
 import subprocess
 import time
 import traceback
+import venv
+import platform
 
 def check_python_version():
     """Проверяет версию Python."""
@@ -31,8 +33,37 @@ def check_python_version():
     print(f"Версия Python: {current_version[0]}.{current_version[1]}")
     return True
 
-def install_dependencies():
-    """Устанавливает необходимые зависимости."""
+def create_virtual_environment():
+    """Создает виртуальное окружение, если оно не существует."""
+    print("Проверка виртуального окружения...")
+    
+    # Путь к директории виртуального окружения
+    venv_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv")
+    
+    # Проверяем, существует ли виртуальное окружение
+    if os.path.exists(venv_dir):
+        print(f"Виртуальное окружение найдено: {venv_dir}")
+        return venv_dir
+    
+    # Создаем виртуальное окружение
+    try:
+        print(f"Создание виртуального окружения в {venv_dir}...")
+        venv.create(venv_dir, with_pip=True)
+        print("Виртуальное окружение успешно создано.")
+        return venv_dir
+    except Exception as e:
+        print(f"Ошибка при создании виртуального окружения: {e}")
+        return None
+
+def get_venv_python_path(venv_dir):
+    """Возвращает путь к интерпретатору Python в виртуальном окружении."""
+    if platform.system() == "Windows":
+        return os.path.join(venv_dir, "Scripts", "python.exe")
+    else:
+        return os.path.join(venv_dir, "bin", "python")
+
+def install_dependencies(venv_dir):
+    """Устанавливает необходимые зависимости в виртуальное окружение."""
     print("Проверка и установка зависимостей...")
     
     # Путь к файлу с зависимостями
@@ -43,10 +74,14 @@ def install_dependencies():
         print(f"Ошибка: Файл {requirements_file} не найден.")
         return False
     
+    # Путь к интерпретатору Python в виртуальном окружении
+    venv_python = get_venv_python_path(venv_dir)
+    
     # Устанавливаем зависимости
     try:
         print("Установка зависимостей...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", requirements_file])
+        subprocess.check_call([venv_python, "-m", "pip", "install", "--upgrade", "pip"])
+        subprocess.check_call([venv_python, "-m", "pip", "install", "-r", requirements_file])
         print("Зависимости успешно установлены.")
         return True
     except Exception as e:
@@ -74,18 +109,19 @@ def check_src_directory():
     print("Структура проекта в порядке")
     return True
 
-def run_application():
-    """Запускает приложение."""
+def run_application(venv_dir):
+    """Запускает приложение из виртуального окружения."""
     print("Запуск приложения HeatMapCAD...")
     
-    # Добавляем путь к исходному коду в PYTHONPATH
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+    # Путь к интерпретатору Python в виртуальном окружении
+    venv_python = get_venv_python_path(venv_dir)
+    
+    # Путь к основному файлу приложения
+    main_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src", "main.py")
     
     try:
-        # Импортируем и запускаем приложение
-        from src.main import Application
-        app = Application()
-        app.run()
+        # Запускаем приложение из виртуального окружения
+        subprocess.check_call([venv_python, main_file])
         return True
     except Exception as e:
         error_msg = f"Ошибка при запуске приложения: {e}\n\n"
@@ -148,15 +184,23 @@ def main():
             input("Нажмите Enter для выхода...")
             return 1
         
+        # Создаем виртуальное окружение
+        venv_dir = create_virtual_environment()
+        if not venv_dir:
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write("Ошибка: Не удалось создать виртуальное окружение\n")
+            input("Нажмите Enter для выхода...")
+            return 1
+        
         # Устанавливаем зависимости
-        if not install_dependencies():
+        if not install_dependencies(venv_dir):
             with open(log_file, "a", encoding="utf-8") as f:
                 f.write("Ошибка: Не удалось установить зависимости\n")
             input("Нажмите Enter для выхода...")
             return 1
         
         # Запускаем приложение
-        if not run_application():
+        if not run_application(venv_dir):
             with open(log_file, "a", encoding="utf-8") as f:
                 f.write("Ошибка: Не удалось запустить приложение\n")
             return 1
