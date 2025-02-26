@@ -39,10 +39,12 @@ class HeatmapVisualizer(BaseVisualizer):
         self.positions = [(x, y) for x, y, _ in data]
         # Сбрасываем кэш при обновлении данных
         self._cached_heatmap = None
+        # Сбрасываем флаг отображения фона при обновлении данных
+        self._background_image_shown = False
 
     def _calculate_heatmap(self) -> Tuple[np.ndarray, List[float]]:
         """Вычислить тепловую карту."""
-        if not self.positions:
+        if not self.positions or self.background_image is None:
             return None, None
 
         x, y = zip(*self.positions)
@@ -80,6 +82,8 @@ class HeatmapVisualizer(BaseVisualizer):
             # Обновляем компоновку для правильного центрирования
             self.fig.tight_layout(pad=0)
             self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+            # Сбрасываем флаг отображения фона при изменении размера
+            self._background_image_shown = False
 
     def render(self) -> np.ndarray:
         """Отрендерить тепловую карту."""
@@ -87,30 +91,31 @@ class HeatmapVisualizer(BaseVisualizer):
             # Обновляем размер фигуры
             self._update_figure_size()
             
-            # Очищаем оси только если нужно
-            if not self._background_image_shown or self.background_image is not None:
-                self.ax.clear()
-                self.ax.axis('off')
-                if self.background_image is not None:
-                    # Отображаем фоновое изображение с правильным центрированием
-                    self.ax.imshow(self.background_image, extent=[0, self.background_image.shape[1], 
-                                                                  self.background_image.shape[0], 0])
-                    # Устанавливаем границы осей точно по размеру изображения
-                    self.ax.set_xlim(0, self.background_image.shape[1])
-                    self.ax.set_ylim(self.background_image.shape[0], 0)
-                self._background_image_shown = True
-
+            # Всегда очищаем оси для перерисовки
+            self.ax.clear()
+            self.ax.axis('off')
+            
+            # Проверяем наличие фонового изображения
+            if self.background_image is None:
+                print("Ошибка: Фоновое изображение (скриншот) отсутствует")
+                width, height = self.fig.canvas.get_width_height()
+                return np.zeros((height, width, 3), dtype=np.uint8)
+            
+            # Отображаем фоновое изображение
+            self.ax.imshow(self.background_image, extent=[0, self.background_image.shape[1], 
+                                                        self.background_image.shape[0], 0])
+            # Устанавливаем границы осей точно по размеру изображения
+            self.ax.set_xlim(0, self.background_image.shape[1])
+            self.ax.set_ylim(self.background_image.shape[0], 0)
+            self._background_image_shown = True
+            
             # Если есть позиции, создаем или используем кэшированную тепловую карту
             if self.positions:
                 if self._cached_heatmap is None:
                     self._cached_heatmap, self._cached_extent = self._calculate_heatmap()
                 
                 if self._cached_heatmap is not None:
-                    # Удаляем предыдущую тепловую карту, если она есть
-                    for im in self.ax.images[1:]:
-                        im.remove()
-                    
-                    # Отображаем новую тепловую карту
+                    # Отображаем тепловую карту поверх фона
                     self.ax.imshow(
                         self._cached_heatmap,
                         extent=self._cached_extent,
