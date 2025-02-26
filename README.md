@@ -28,7 +28,7 @@
 1. Скачайте архив `HeatMapCAD_Portable.zip` с [официального сайта](https://heatmapcad.ru/download) или из раздела [Releases](https://github.com/fylhtq7779/HeatMapCAD_DV/releases)
 2. Распакуйте архив в любую директорию
 3. Запустите:
-   - В Windows: дважды щелкните на файле `start_heatmap.bat`
+   - В Windows: запустите `launch_heatmap.py` с помощью Python
    - В Linux/macOS: запустите `start_heatmap.sh` (возможно, потребуется сделать файл исполняемым: `chmod +x start_heatmap.sh`)
 4. При первом запуске будут автоматически установлены все необходимые зависимости
 
@@ -43,7 +43,7 @@ cd HeatMapCAD_DV
 2. Запустите приложение:
 ```bash
 # Windows
-start_heatmap.bat
+python launch_heatmap.py
 
 # Linux/macOS
 chmod +x start_heatmap.sh
@@ -124,7 +124,6 @@ HeatMapCAD_DV/
 ├── mouse_tracks/       # Директория для хранения треков мыши
 │
 ├── launch_heatmap.py   # Скрипт для запуска приложения
-├── start_heatmap.bat   # Пакетный файл для запуска в Windows
 ├── start_heatmap.sh    # Скрипт для запуска в Linux/macOS
 ├── create_portable_archive.py # Скрипт для создания портативного архива
 │

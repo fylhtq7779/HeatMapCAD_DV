@@ -25,10 +25,10 @@ def create_portable_archive():
     # Список файлов и директорий для включения в архив
     include_files = [
         "launch_heatmap.py",
-        "start_heatmap.bat",
         "start_heatmap.sh",
         "requirements.txt",
-        "README_PORTABLE.md",
+        "README.md.portable",
+        "SUMMARY.md.portable",
         "LICENSE.txt",
         "USER_GUIDE.txt"
     ]
@@ -37,6 +37,16 @@ def create_portable_archive():
         "src",
         "config",
         "data"
+    ]
+    
+    # Файлы и директории для исключения
+    exclude_patterns = [
+        "*.bat",
+        "*.exe",
+        "mouse_tracks/*.json",
+        "data/*.json",
+        "data/maps/*.json",
+        "config/user_config.json"
     ]
     
     # Проверяем наличие всех необходимых файлов и директорий
@@ -58,6 +68,11 @@ def create_portable_archive():
             print(f"  - {dir_name}/")
         return False
     
+    # Создаем пустой user_config.json
+    user_config_path = os.path.join(current_dir, "config", "user_config.json")
+    with open(user_config_path, 'w', encoding='utf-8') as f:
+        f.write('{\n    "user": {},\n    "is_first_launch": true,\n    "available_programs": ["Компас 3D"]\n}')
+    
     # Создаем архив
     try:
         with zipfile.ZipFile(archive_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -76,15 +91,38 @@ def create_portable_archive():
                         for file in files:
                             file_path = os.path.join(root, file)
                             arcname = os.path.relpath(file_path, current_dir)
-                            print(f"  - {arcname}")
-                            zipf.write(file_path, arcname)
+                            
+                            # Проверяем, не нужно ли исключить файл
+                            skip_file = False
+                            for pattern in exclude_patterns:
+                                import fnmatch
+                                if fnmatch.fnmatch(arcname, pattern):
+                                    skip_file = True
+                                    print(f"  - Пропуск файла: {arcname}")
+                                    break
+                            
+                            if not skip_file:
+                                print(f"  - {arcname}")
+                                zipf.write(file_path, arcname)
         
         print(f"Архив успешно создан: {archive_name}")
         print(f"Размер архива: {os.path.getsize(archive_name) / (1024*1024):.2f} МБ")
+        
+        # Восстанавливаем оригинальный user_config.json
+        if os.path.exists(user_config_path + ".bak"):
+            shutil.copy(user_config_path + ".bak", user_config_path)
+            os.remove(user_config_path + ".bak")
+        
         return True
     
     except Exception as e:
         print(f"Ошибка при создании архива: {e}")
+        
+        # Восстанавливаем оригинальный user_config.json в случае ошибки
+        if os.path.exists(user_config_path + ".bak"):
+            shutil.copy(user_config_path + ".bak", user_config_path)
+            os.remove(user_config_path + ".bak")
+        
         return False
 
 def main():
@@ -92,6 +130,11 @@ def main():
     print("=" * 50)
     print("Создание портативного архива HeatMapCAD")
     print("=" * 50)
+    
+    # Создаем резервную копию user_config.json
+    user_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "user_config.json")
+    if os.path.exists(user_config_path):
+        shutil.copy(user_config_path, user_config_path + ".bak")
     
     if create_portable_archive():
         print("Архив успешно создан.")
