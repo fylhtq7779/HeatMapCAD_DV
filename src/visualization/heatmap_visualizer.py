@@ -1,8 +1,5 @@
 import numpy as np
 from scipy.ndimage import gaussian_filter
-import matplotlib
-# Явно устанавливаем backend перед импортом pyplot
-matplotlib.use('Agg')  # Используем Agg backend, который не требует GUI
 import matplotlib.pyplot as plt
 from typing import List, Tuple, Any, Optional
 
@@ -94,11 +91,6 @@ class HeatmapVisualizer(BaseVisualizer):
     def render(self) -> np.ndarray:
         """Отрендерить тепловую карту."""
         try:
-            # Добавляем отладочный вывод
-            print("Начало рендеринга тепловой карты")
-            print(f"Размер фонового изображения: {self.background_image.shape if self.background_image is not None else 'None'}")
-            print(f"Количество позиций для тепловой карты: {len(self.positions)}")
-            
             # Обновляем размер фигуры
             self._update_figure_size()
             
@@ -113,7 +105,6 @@ class HeatmapVisualizer(BaseVisualizer):
                 return np.zeros((height, width, 3), dtype=np.uint8)
             
             # Отображаем фоновое изображение
-            print("Отображение фонового изображения")
             self.ax.imshow(self.background_image, extent=[0, self.background_image.shape[1], 
                                                         self.background_image.shape[0], 0])
             # Устанавливаем границы осей точно по размеру изображения
@@ -123,9 +114,7 @@ class HeatmapVisualizer(BaseVisualizer):
             
             # Если есть позиции, создаем или используем кэшированную тепловую карту
             if self.positions:
-                print("Рисуем тепловую карту поверх фона")
                 if self._cached_heatmap is None:
-                    print("Вычисление новой тепловой карты")
                     self._cached_heatmap, self._cached_extent = self._calculate_heatmap()
                 
                 if self._cached_heatmap is not None:
@@ -143,24 +132,19 @@ class HeatmapVisualizer(BaseVisualizer):
                         self.fig.colorbar(heatmap_img, ax=self.ax)
             
             # Обновляем холст
-            print("Обновление холста фигуры")
             self.fig.canvas.draw()
             
             # Получаем размеры холста
             width, height = self.fig.canvas.get_width_height()
-            print(f"Размеры холста: {width}x{height}")
             
             # Получаем данные изображения
             try:
                 # Для новых версий matplotlib (3.5+)
-                print("Попытка получения буфера RGBA")
                 buf = self.fig.canvas.buffer_rgba()
                 data = np.asarray(buf)
                 # Конвертируем RGBA в RGB
                 data = data[:, :, :3]
-                print("Успешно получен RGBA буфер")
-            except (AttributeError, TypeError) as e:
-                print(f"Ошибка buffer_rgba: {e}, попытка использовать tostring_rgb")
+            except (AttributeError, TypeError):
                 try:
                     # Для версий matplotlib 3.1 - 3.4
                     data = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
@@ -168,23 +152,19 @@ class HeatmapVisualizer(BaseVisualizer):
                     
                     # Проверяем соответствие размеров
                     if len(data) != expected_size:
-                        print(f"Предупреждение: Размер данных не соответствует ожидаемому ({len(data)} vs {expected_size})")
                         # Если размеры не совпадают, масштабируем данные
                         data = data[:expected_size]
                     
                     # Преобразуем в нужную форму
                     data = data.reshape(height, width, 3)
-                    print("Успешно получен RGB буфер")
                 except Exception as e:
-                    print(f"Ошибка при получении данных изображения: {e}, последняя попытка с FigureCanvasAgg")
+                    print(f"Ошибка при получении данных изображения: {e}")
                     # Последняя попытка - использовать устаревший метод
                     from matplotlib.backends.backend_agg import FigureCanvasAgg
                     canvas = FigureCanvasAgg(self.fig)
                     canvas.draw()
                     data = np.array(canvas.renderer.buffer_rgba())[:, :, :3]
-                    print("Успешно получен буфер через FigureCanvasAgg")
             
-            print(f"Размер итогового изображения: {data.shape}")
             return data
             
         except Exception as e:
