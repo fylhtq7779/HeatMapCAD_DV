@@ -16,9 +16,6 @@ if exist "%FIRST_RUN_MARKER%" (
     set FIRST_RUN=1
 )
 
-REM Если это не первый запуск и запрошен скрытый режим, переходим к скрытому запуску
-if "%FIRST_RUN%"=="0" if "%SILENT_MODE%"=="silent" goto SILENT_LAUNCH
-
 REM Создаем файл для отладки
 echo Начало отладки > debug_launch.log
 echo Время: %date% %time% >> debug_launch.log
@@ -146,18 +143,14 @@ if not exist "launch_heatmap.py" (
     exit /b 1
 )
 
-REM Запускаем приложение - ИЗМЕНЕНО: вывод в консоль
+REM Запускаем приложение - ИЗМЕНЕНО: прямой запуск для видимого вывода
 echo Запуск приложения...
 echo Запуск приложения... >> debug_launch.log
 echo Запуск команды: %PYTHON_CMD% -u launch_heatmap.py
 echo Запуск команды: %PYTHON_CMD% -u launch_heatmap.py >> debug_launch.log
 
-REM Сохраняем вывод Python в переменную, чтобы проверить на маркер первого запуска
-set FIRST_RUN_COMPLETED=0
-for /f "tokens=*" %%a in ('%PYTHON_CMD% -u launch_heatmap.py') do (
-    echo %%a
-    if "%%a"=="[FIRST_RUN_COMPLETED]" set FIRST_RUN_COMPLETED=1
-)
+REM Запускаем Python напрямую, чтобы видеть весь вывод
+%PYTHON_CMD% -u launch_heatmap.py
 
 if %ERRORLEVEL% NEQ 0 (
     echo Произошла ошибка при запуске приложения (код %ERRORLEVEL%)
@@ -171,25 +164,22 @@ if %ERRORLEVEL% NEQ 0 (
 echo Приложение успешно запущено
 echo Приложение успешно запущено >> debug_launch.log
 
-REM Если это был первый запуск и он успешно завершен, предлагаем нажать любую клавишу
-if "%FIRST_RUN%"=="1" if "%FIRST_RUN_COMPLETED%"=="1" (
-    echo.
-    echo Первый запуск успешно завершен. При следующем запуске консоль не будет отображаться.
-    echo.
-    echo Создаем ярлык для бесшумного запуска...
-    
-    REM Создаем ярлык для скрытого запуска
-    echo @echo off > HeatMapCAD.bat
-    echo start "" /b cmd /c "start_heatmap.bat silent" >> HeatMapCAD.bat
-    
-    echo Ярлык HeatMapCAD.bat создан в текущей директории.
-    echo.
-    pause
+REM Если маркерный файл существует, значит установка прошла успешно
+if exist "%FIRST_RUN_MARKER%" (
+    if "%FIRST_RUN%"=="1" (
+        echo.
+        echo Первый запуск успешно завершен. При следующем запуске через HeatMapCAD.vbs консоль не будет отображаться.
+        echo.
+        
+        REM Создаем VBS-скрипт для полностью скрытого запуска
+        echo Set WshShell = CreateObject("WScript.Shell") > HeatMapCAD.vbs
+        echo WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName) >> HeatMapCAD.vbs
+        echo WshShell.Run "%PYTHON_CMD% -u launch_heatmap.py", 0, False >> HeatMapCAD.vbs
+        
+        echo Создан файл HeatMapCAD.vbs для запуска без консоли.
+        echo.
+        pause
+    )
 )
 
-exit /b 0
-
-:SILENT_LAUNCH
-REM Скрытый запуск приложения для последующих запусков
-%PYTHON_CMD% -u launch_heatmap.py > nul 2>&1
 exit /b 0 
