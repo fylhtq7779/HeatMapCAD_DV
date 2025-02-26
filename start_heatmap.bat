@@ -164,22 +164,21 @@ if %ERRORLEVEL% NEQ 0 (
 echo Приложение успешно запущено
 echo Приложение успешно запущено >> debug_launch.log
 
-REM Если маркерный файл существует, значит установка прошла успешно
-if exist "%FIRST_RUN_MARKER%" (
-    if "%FIRST_RUN%"=="1" (
-        echo.
-        echo Первый запуск успешно завершен. При следующем запуске через HeatMapCAD.vbs консоль не будет отображаться.
-        echo.
-        
-        REM Создаем VBS-скрипт для полностью скрытого запуска
-        echo Set WshShell = CreateObject("WScript.Shell") > HeatMapCAD.vbs
-        echo WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName) >> HeatMapCAD.vbs
-        echo WshShell.Run "%PYTHON_CMD% -u launch_heatmap.py", 0, False >> HeatMapCAD.vbs
-        
-        echo Создан файл HeatMapCAD.vbs для запуска без консоли.
-        echo.
-        pause
-    )
+REM Проверяем, существовал ли файл маркера ДО запуска и существует ли ПОСЛЕ запуска
+REM Если его не было до запуска, но он появился после - значит это был успешный первый запуск
+if "%FIRST_RUN%"=="1" if exist "%FIRST_RUN_MARKER%" (
+    echo.
+    echo Первый запуск успешно завершен. При следующем запуске через HeatMapCAD.vbs консоль не будет отображаться.
+    echo.
+    
+    REM Создаем VBS-скрипт для полностью скрытого запуска
+    echo Set WshShell = CreateObject("WScript.Shell") > HeatMapCAD.vbs
+    echo WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName) >> HeatMapCAD.vbs
+    echo WshShell.Run "%PYTHON_CMD% -u launch_heatmap.py", 0, False >> HeatMapCAD.vbs
+    
+    echo Создан файл HeatMapCAD.vbs для запуска без консоли.
+    echo.
+    pause
 )
 
 exit /b 0 
