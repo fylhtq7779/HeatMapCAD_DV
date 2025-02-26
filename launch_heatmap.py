@@ -14,11 +14,21 @@ import traceback
 import platform
 
 # Создаем отладочный лог-файл
-debug_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "debug_launch.log")
+debug_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "python_debug.log")
 def log_debug(message):
     """Записывает отладочное сообщение в лог-файл."""
-    with open(debug_log_path, "a", encoding="utf-8") as f:
-        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
+    try:
+        with open(debug_log_path, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
+    except PermissionError:
+        # Если нет доступа к файлу, пытаемся создать лог в другом месте
+        alternate_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "alternative_debug.log")
+        try:
+            with open(alternate_log_path, "a", encoding="utf-8") as f:
+                f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - [ALTERNATE LOG] {message}\n")
+        except Exception:
+            # Если и это не сработало, выводим сообщение на экран
+            print(f"ОТЛАДКА: {message}")
 
 # Записываем начальную информацию
 log_debug("=" * 50)
