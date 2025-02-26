@@ -62,7 +62,6 @@ venv.bak/
 *.log
 error_log.txt
 launch_log.txt
-HeatMapCAD_Portable_*.zip
 debug_output/
 mouse_tracks/*.json
 data/maps/*.json
