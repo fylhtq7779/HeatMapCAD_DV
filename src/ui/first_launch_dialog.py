@@ -132,70 +132,53 @@ class FirstLaunchDialog:
         self.dialog.destroy()
 
     def save_data(self):
-        """Сохранить введенные данные."""
         try:
-            # Получаем значения из полей ввода
-            fullname = self.name_entry.get().strip()
+            name = self.name_entry.get().strip()
             group = self.group_entry.get().strip()
             program = self.program_combo.get()
-            
-            # Базовая валидация
-            if not fullname:
-                ttkb.Messagebox.show_error(
+
+            if not name or not group:
+                ttkb.messagebox.showerror(
                     "Ошибка",
-                    "Пожалуйста, введите ваши ФИО",
-                    parent=self.dialog
+                    "Пожалуйста, заполните все поля!"
                 )
                 return
                 
-            if not group:
-                ttkb.Messagebox.show_error(
+            # Проверяем минимальную длину ФИО и группы
+            if len(name) < 5:
+                ttkb.messagebox.showerror(
                     "Ошибка",
-                    "Пожалуйста, введите название вашей группы",
-                    parent=self.dialog
+                    "ФИО должно содержать не менее 5 символов!"
                 )
                 return
                 
-            # Проверка минимальной длины группы (3 символа)
             if len(group) < 3:
-                ttkb.Messagebox.show_error(
+                ttkb.messagebox.showerror(
                     "Ошибка",
-                    "Название группы должно содержать минимум 3 символа",
-                    parent=self.dialog
+                    "Название группы должно содержать не менее 3 символов!"
                 )
                 return
-                
-            if not program:
-                ttkb.Messagebox.show_error(
-                    "Ошибка",
-                    "Пожалуйста, выберите программу",
-                    parent=self.dialog
-                )
-                return
-            
-            # Сохраняем в конфигурации
-            user_config = {
-                'fullname': fullname,
-                'group': group,
-                'selected_program': program
-            }
-            
-            # Создаем директорию, если её нет
-            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
-            
+
+            # Сохраняем данные
+            self.config["user"]["fullname"] = name
+            self.config["user"]["group"] = group
+            self.config["user"]["selected_program"] = program
+            self.config["is_first_launch"] = False
+
             # Сохраняем конфигурацию
+            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
             with open(self.config_path, 'w', encoding='utf-8') as f:
-                json.dump(user_config, f, ensure_ascii=False, indent=2)
-            
-            self.result = user_config
+                json.dump(self.config, f, ensure_ascii=False, indent=4)
+
+            self.result = self.config["user"]
+            self.dialog.quit()
             self.dialog.destroy()
             
         except Exception as e:
             print(f"Ошибка при сохранении данных: {e}")
-            ttkb.Messagebox.show_error(
+            ttkb.messagebox.showerror(
                 "Ошибка",
-                f"Не удалось сохранить данные: {e}",
-                parent=self.dialog
+                f"Не удалось сохранить данные: {str(e)}"
             )
 
     def show(self) -> Optional[Dict[str, Any]]:
