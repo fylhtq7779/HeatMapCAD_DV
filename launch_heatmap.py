@@ -16,7 +16,11 @@ import platform
 # Создаем отладочный лог-файл
 debug_log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "python_debug.log")
 def log_debug(message):
-    """Записывает отладочное сообщение в лог-файл."""
+    """Записывает отладочное сообщение в лог-файл и выводит в консоль."""
+    # Выводим сообщение в консоль
+    print(f"[HeatMapCAD] {message}")
+    
+    # Записываем в лог
     try:
         with open(debug_log_path, "a", encoding="utf-8") as f:
             f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
@@ -26,9 +30,8 @@ def log_debug(message):
         try:
             with open(alternate_log_path, "a", encoding="utf-8") as f:
                 f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - [ALTERNATE LOG] {message}\n")
-        except Exception:
-            # Если и это не сработало, выводим сообщение на экран
-            print(f"ОТЛАДКА: {message}")
+        except Exception as e:
+            print(f"[HeatMapCAD] Не удалось записать в лог: {e}")
 
 # Записываем начальную информацию
 log_debug("=" * 50)
@@ -49,7 +52,6 @@ except ImportError as e:
 
 def check_python_version():
     """Проверяет версию Python."""
-    print("Проверка версии Python...")
     log_debug("Проверка версии Python...")
     
     # Минимальная требуемая версия Python
@@ -61,17 +63,42 @@ def check_python_version():
     # Проверяем, соответствует ли текущая версия требованиям
     if current_version < min_version:
         error_msg = f"Ошибка: Требуется Python {min_version[0]}.{min_version[1]} или выше. Текущая версия: {current_version[0]}.{current_version[1]}"
-        print(error_msg)
         log_debug(error_msg)
         return False
     
     log_debug(f"Версия Python: {current_version[0]}.{current_version[1]} - OK")
-    print(f"Версия Python: {current_version[0]}.{current_version[1]}")
     return True
+
+def check_if_dependencies_installed(venv_dir):
+    """Проверяет, установлены ли уже необходимые зависимости."""
+    log_debug("Проверка наличия установленных зависимостей...")
+    
+    # Путь к интерпретатору Python в виртуальном окружении
+    venv_python = get_venv_python_path(venv_dir)
+    
+    # Проверяем наличие основных пакетов
+    required_packages = ["matplotlib", "numpy", "pynput", "ttkbootstrap", "pyautogui", "requests"]
+    
+    all_installed = True
+    for package in required_packages:
+        try:
+            # Проверяем, установлен ли пакет
+            check_cmd = [venv_python, "-c", f"import {package}; print('{package} установлен')"]
+            result = subprocess.run(check_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            
+            if result.returncode == 0:
+                log_debug(f"Пакет {package} уже установлен")
+            else:
+                log_debug(f"Пакет {package} не установлен")
+                all_installed = False
+        except Exception as e:
+            log_debug(f"Ошибка при проверке пакета {package}: {e}")
+            all_installed = False
+    
+    return all_installed
 
 def create_virtual_environment():
     """Создает виртуальное окружение, если оно не существует."""
-    print("Проверка виртуального окружения...")
     log_debug("Проверка виртуального окружения...")
     
     # Путь к директории виртуального окружения
@@ -81,22 +108,18 @@ def create_virtual_environment():
     # Проверяем, существует ли виртуальное окружение
     if os.path.exists(venv_dir):
         log_debug(f"Виртуальное окружение найдено: {venv_dir}")
-        print(f"Виртуальное окружение найдено: {venv_dir}")
         return venv_dir
     
     # Создаем виртуальное окружение
     try:
         log_debug(f"Создание виртуального окружения в {venv_dir}...")
-        print(f"Создание виртуального окружения в {venv_dir}...")
         venv.create(venv_dir, with_pip=True)
         log_debug("Виртуальное окружение успешно создано.")
-        print("Виртуальное окружение успешно создано.")
         return venv_dir
     except Exception as e:
         error_msg = f"Ошибка при создании виртуального окружения: {e}"
         log_debug(error_msg)
         log_debug(traceback.format_exc())
-        print(error_msg)
         return None
 
 def get_venv_python_path(venv_dir):
@@ -111,9 +134,13 @@ def get_venv_python_path(venv_dir):
     return python_path
 
 def install_dependencies(venv_dir):
-    """Устанавливает необходимые зависимости в виртуальное окружение."""
-    print("Проверка и установка зависимостей...")
+    """Устанавливает необходимые зависимости в виртуальное окружение, если они еще не установлены."""
     log_debug("Проверка и установка зависимостей...")
+    
+    # Проверяем, установлены ли уже зависимости
+    if check_if_dependencies_installed(venv_dir):
+        log_debug("Все необходимые зависимости уже установлены. Пропускаем установку.")
+        return True
     
     # Путь к файлу с зависимостями
     requirements_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "requirements.txt")
@@ -123,7 +150,6 @@ def install_dependencies(venv_dir):
     if not os.path.exists(requirements_file):
         error_msg = f"Ошибка: Файл {requirements_file} не найден."
         log_debug(error_msg)
-        print(error_msg)
         return False
     
     # Путь к интерпретатору Python в виртуальном окружении
@@ -132,7 +158,6 @@ def install_dependencies(venv_dir):
     # Устанавливаем зависимости
     try:
         log_debug("Установка зависимостей...")
-        print("Установка зависимостей...")
         
         # Обновляем pip
         log_debug("Обновление pip...")
@@ -147,18 +172,15 @@ def install_dependencies(venv_dir):
         subprocess.check_call(install_cmd)
         
         log_debug("Зависимости успешно установлены.")
-        print("Зависимости успешно установлены.")
         return True
     except Exception as e:
         error_msg = f"Ошибка при установке зависимостей: {e}"
         log_debug(error_msg)
         log_debug(traceback.format_exc())
-        print(error_msg)
         return False
 
 def check_src_directory():
     """Проверяет наличие директории src и основных файлов."""
-    print("Проверка структуры проекта...")
     log_debug("Проверка структуры проекта...")
     
     # Путь к директории src
@@ -169,7 +191,6 @@ def check_src_directory():
     if not os.path.exists(src_dir):
         error_msg = f"Ошибка: Директория {src_dir} не найдена"
         log_debug(error_msg)
-        print(error_msg)
         return False
     
     # Проверяем наличие основных файлов
@@ -180,7 +201,6 @@ def check_src_directory():
     if not os.path.exists(main_file):
         error_msg = f"Ошибка: Файл {main_file} не найден"
         log_debug(error_msg)
-        print(error_msg)
         return False
     
     # Проверяем содержимое директории src
@@ -191,12 +211,10 @@ def check_src_directory():
         log_debug(f"Ошибка при чтении содержимого директории src: {e}")
     
     log_debug("Структура проекта в порядке")
-    print("Структура проекта в порядке")
     return True
 
 def run_application(venv_dir):
     """Запускает приложение из виртуального окружения."""
-    print("Запуск приложения HeatMapCAD...")
     log_debug("Запуск приложения HeatMapCAD...")
     
     # Путь к интерпретатору Python в виртуальном окружении
@@ -217,7 +235,6 @@ def run_application(venv_dir):
         error_msg += traceback.format_exc()
         
         log_debug(error_msg)
-        print(error_msg)
         
         # Записываем ошибку в лог-файл
         with open("error_log.txt", "w", encoding="utf-8") as log:
@@ -255,12 +272,6 @@ def main():
             f.write(f"Путь к Python: {sys.executable}\n")
             f.write(f"Рабочая директория: {os.getcwd()}\n")
             f.write(f"Директория скрипта: {os.path.dirname(os.path.abspath(__file__))}\n\n")
-        
-        print(f"Запуск HeatMapCAD...")
-        print(f"Python: {sys.version}")
-        print(f"Путь к Python: {sys.executable}")
-        print(f"Рабочая директория: {os.getcwd()}")
-        print(f"Директория скрипта: {os.path.dirname(os.path.abspath(__file__))}")
         
         # Проверяем версию Python
         if not check_python_version():
