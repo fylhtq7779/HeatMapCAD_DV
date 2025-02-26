@@ -26,6 +26,7 @@ def create_portable_archive():
     include_files = [
         "launch_heatmap.py",
         "start_heatmap.sh",
+        "start_heatmap.bat",
         "requirements.txt",
         "README.md.portable",
         "SUMMARY.md.portable",
@@ -41,7 +42,6 @@ def create_portable_archive():
     
     # Файлы и директории для исключения
     exclude_patterns = [
-        "*.bat",
         "*.exe",
         "mouse_tracks/*.json",
         "data/*.json",
