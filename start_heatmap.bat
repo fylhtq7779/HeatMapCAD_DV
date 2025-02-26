@@ -8,12 +8,14 @@ echo Начало отладки > debug_launch.log
 echo Время: %date% %time% >> debug_launch.log
 
 REM Ищем Python в системе
+echo Поиск Python в системе...
 echo Поиск Python в системе... >> debug_launch.log
 
 REM Пробуем использовать py.exe лаунчер (если установлен Python Launcher)
 set PYTHON_PATH=
 WHERE py >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
+    echo Python Launcher найден
     echo Python Launcher найден >> debug_launch.log
     set "PYTHON_CMD=py -3"
     goto PYTHON_FOUND
@@ -22,6 +24,7 @@ if %ERRORLEVEL% EQU 0 (
 REM Пробуем найти python.exe через where
 WHERE python >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
+    echo Python найден через where команду
     echo Python найден через where команду >> debug_launch.log
     set "PYTHON_CMD=python"
     goto PYTHON_FOUND
@@ -110,32 +113,40 @@ pause
 exit /b 1
 
 :PYTHON_FOUND
+echo Используемая команда Python: %PYTHON_CMD%
 echo Используемая команда Python: %PYTHON_CMD% >> debug_launch.log
 
 REM Проверяем версию Python
+echo Проверка версии Python...
 echo Проверка версии Python... >> debug_launch.log
+%PYTHON_CMD% --version 
 %PYTHON_CMD% --version >> debug_launch.log 2>&1
 
 REM Проверяем наличие файла launch_heatmap.py
 if not exist "launch_heatmap.py" (
+    echo ОШИБКА: Файл launch_heatmap.py не найден
     echo ОШИБКА: Файл launch_heatmap.py не найден >> debug_launch.log
-    echo ОШИБКА: Файл launch_heatmap.py не найден.
     pause
     exit /b 1
 )
 
-REM Запускаем приложение с перенаправлением вывода в лог
+REM Запускаем приложение - ИЗМЕНЕНО: вывод в консоль
+echo Запуск приложения...
 echo Запуск приложения... >> debug_launch.log
-echo Запуск команды: %PYTHON_CMD% launch_heatmap.py >> debug_launch.log
-%PYTHON_CMD% launch_heatmap.py >> debug_launch.log 2>&1
+echo Запуск команды: %PYTHON_CMD% -u launch_heatmap.py
+echo Запуск команды: %PYTHON_CMD% -u launch_heatmap.py >> debug_launch.log
+
+REM Запускаем Python с опцией -u для отключения буферизации вывода
+%PYTHON_CMD% -u launch_heatmap.py
 if %ERRORLEVEL% NEQ 0 (
+    echo Произошла ошибка при запуске приложения (код %ERRORLEVEL%)
     echo Произошла ошибка при запуске приложения (код %ERRORLEVEL%) >> debug_launch.log
     echo.
-    echo Произошла ошибка при запуске приложения.
-    echo Подробности в файле debug_launch.log
+    echo Подробности в файле python_debug.log
     pause
     exit /b 1
 )
 
+echo Приложение успешно запущено
 echo Приложение успешно запущено >> debug_launch.log
 exit /b 0 
