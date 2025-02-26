@@ -4,6 +4,8 @@ import ttkbootstrap as ttkb
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from typing import Any, Dict, Optional
 import os
+import numpy as np
+from PIL import Image, ImageTk
 
 from core.mouse_tracker import MouseTracker
 from visualization.heatmap_visualizer import HeatmapVisualizer
@@ -335,10 +337,34 @@ class MainWindow:
 
     def update_visualization(self) -> None:
         """Обновить визуализацию."""
-        if self.canvas is not None:
-            self.visualizer.render()
-            self.canvas.draw()
-            self.canvas.flush_events()
+        if not self.visualizer:
+            return
+        
+        try:
+            # Визуализировать текущие данные
+            image_data = self.visualizer.render()
+            
+            # Проверка на черное изображение
+            is_black = np.mean(image_data) < 10  # Если среднее значение пикселей < 10, считаем изображение черным
+            if is_black:
+                print("ПРЕДУПРЕЖДЕНИЕ: Отрендеренное изображение слишком темное (возможно черный экран)")
+            
+            # Преобразовать в PIL Image
+            image = Image.fromarray(image_data)
+            
+            # Преобразовать в формат, подходящий для Tkinter
+            photo = ImageTk.PhotoImage(image)
+            
+            # Отобразить изображение в канвасе
+            self.canvas.config(width=photo.width(), height=photo.height())
+            self.canvas_image = photo  # Сохраняем ссылку, чтобы избежать сборки мусора
+            self.canvas.delete("all")  # Удаляем предыдущее изображение
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+            
+            # Обновить интерфейс
+            self.root.update_idletasks()  # Правильный метод для Tkinter
+        except Exception as e:
+            print(f"Ошибка при обновлении визуализации: {e}")
 
     def save_heatmap(self) -> None:
         """Сохранить тепловую карту."""
