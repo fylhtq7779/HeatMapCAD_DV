@@ -24,7 +24,8 @@ class Config:
         },
         'network': {
             'server_url': '',
-            'auto_upload': False,
+            'auto_upload': True,  # По умолчанию включено
+            'send_data': True,    # Новая опция для отключения отправки данных
             'sync_interval': 300  # интервал синхронизации в секундах
         },
         'updates': {

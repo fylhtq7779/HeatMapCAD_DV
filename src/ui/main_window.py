@@ -4,8 +4,6 @@ import ttkbootstrap as ttkb
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from typing import Any, Dict, Optional
 import os
-import numpy as np
-from PIL import Image, ImageTk
 
 from core.mouse_tracker import MouseTracker
 from visualization.heatmap_visualizer import HeatmapVisualizer
@@ -337,34 +335,10 @@ class MainWindow:
 
     def update_visualization(self) -> None:
         """Обновить визуализацию."""
-        if not self.visualizer:
-            return
-        
-        try:
-            # Визуализировать текущие данные
-            image_data = self.visualizer.render()
-            
-            # Проверка на черное изображение
-            is_black = np.mean(image_data) < 10  # Если среднее значение пикселей < 10, считаем изображение черным
-            if is_black:
-                print("ПРЕДУПРЕЖДЕНИЕ: Отрендеренное изображение слишком темное (возможно черный экран)")
-            
-            # Преобразовать в PIL Image
-            image = Image.fromarray(image_data)
-            
-            # Преобразовать в формат, подходящий для Tkinter
-            photo = ImageTk.PhotoImage(image)
-            
-            # Отобразить изображение в канвасе
-            self.canvas.config(width=photo.width(), height=photo.height())
-            self.canvas_image = photo  # Сохраняем ссылку, чтобы избежать сборки мусора
-            self.canvas.delete("all")  # Удаляем предыдущее изображение
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-            
-            # Обновить интерфейс
-            self.root.update_idletasks()  # Правильный метод для Tkinter
-        except Exception as e:
-            print(f"Ошибка при обновлении визуализации: {e}")
+        if self.canvas is not None:
+            self.visualizer.render()
+            self.canvas.draw()
+            self.canvas.flush_events()
 
     def save_heatmap(self) -> None:
         """Сохранить тепловую карту."""
@@ -393,6 +367,15 @@ class MainWindow:
                 "Сначала выберите трек для загрузки"
             )
             return
+
+        # Проверяем, не отключена ли отправка данных в настройках
+        if not self.config.get('network.send_data', True):
+            if not messagebox.askyesno(
+                "Отправка данных отключена",
+                "Отправка данных на сервер отключена в настройках. Вы хотите отправить данные однократно?",
+                icon='warning'
+            ):
+                return  # Пользователь отказался отправлять данные
 
         selected_file = self.track_combobox.get()
         file_path = os.path.join(self.data_manager.storage_dir, selected_file)
@@ -452,6 +435,31 @@ class MainWindow:
             wraplength=300,
             justify=tk.LEFT
         ).pack(anchor=tk.W, pady=2)
+        
+        # Добавляем разделитель
+        ttkb.Separator(user_frame, bootstyle="info").pack(fill=tk.X, pady=5)
+        
+        # Создаем переменную для чекбокса
+        self.send_data_var = tk.BooleanVar(value=self.config.get('network.send_data', True))
+        
+        # Добавляем чекбокс для включения/отключения отправки данных
+        send_data_check = ttkb.Checkbutton(
+            user_frame,
+            text="Отправлять данные на сервер",
+            variable=self.send_data_var,
+            command=self._on_send_data_changed,
+            bootstyle="info-round-toggle"
+        )
+        send_data_check.pack(anchor=tk.W, pady=5)
+
+    def _on_send_data_changed(self) -> None:
+        """Обработчик изменения настройки отправки данных."""
+        # Сохраняем настройку в конфигурацию
+        self.config.set('network.send_data', self.send_data_var.get())
+        
+        # Выводим информационное сообщение
+        state = "включена" if self.send_data_var.get() else "отключена"
+        print(f"Отправка данных на сервер {state}")
 
     def _on_close(self) -> None:
         """Обработчик закрытия окна."""

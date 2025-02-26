@@ -21,11 +21,15 @@ class NetworkClient:
         self.config = config
         self.data_path = 'data'  # Локальная директория для данных
         self.auto_upload = config.get('auto_upload', False)
+        self.send_data = config.get('send_data', True)  # Добавляем параметр отправки данных
         self.sync_interval = config.get('sync_interval', 300)
         self.sync_thread: Optional[threading.Thread] = None
         self.is_running = False
         self.api_client = APIClient()
         self.start_time = datetime.now()
+        
+        # Выводим информацию о настройках
+        print(f"Настройки сети: auto_upload={self.auto_upload}, send_data={self.send_data}")
 
     def _datetime_to_str(self, obj: Any) -> str:
         """Преобразовать datetime в строку."""
@@ -87,7 +91,7 @@ class NetworkClient:
 
     def upload_tracking_data(self, data: Dict[str, Any]) -> bool:
         """
-        Загрузить данные трекинга.
+        Загрузить данные трекинга на сервер.
         
         Args:
             data: Данные для загрузки
@@ -95,43 +99,53 @@ class NetworkClient:
         Returns:
             bool: True если загрузка успешна, False в противном случае
         """
-        print("\nПроверка данных в NetworkClient:")
-        
-        # Проверяем формат данных
-        movements = []
-        if 'tracking_data' in data and isinstance(data['tracking_data'], list):
-            # Данные в формате [x, y, timestamp]
-            movements = [
-                {"x": pos[0], "y": pos[1], "timestamp": pos[2], "event_type": "move"}
-                for pos in data['tracking_data']
-            ]
-            print(f"Найдено {len(movements)} движений мыши в формате tracking_data")
-        elif 'movements' in data and isinstance(data['movements'], list):
-            # Данные уже в нужном формате
-            movements = data['movements']
-            print(f"Найдено {len(movements)} движений мыши в формате movements")
-        
-        # Обновляем данные
-        data['movements'] = movements
-        data['clicks'] = data.get('clicks', [])
-        
-        print("Movements:", len(data.get('movements', [])))
-        print("Clicks:", len(data.get('clicks', [])))
-        print("Sample movement:", data.get('movements', [])[:1])
-        print("Sample click:", data.get('clicks', [])[:1])
-        
-        user_data = data.get('user', {})
-        
-        # Добавляем длительность сессии и обновляем данные
-        data['session_duration'] = self._calculate_session_duration()
-        
-        # Сначала сохраняем локально
-        if not self.save_locally(data, user_data):
-            print("Ошибка при локальном сохранении данных")
-            return False
+        try:
+            print("\nПроверка данных в NetworkClient:")
             
-        # Затем отправляем на сервер
-        return self.api_client.send_heatmap_data(data, user_data)
+            # Проверяем формат данных
+            movements = []
+            if 'tracking_data' in data and isinstance(data['tracking_data'], list):
+                # Данные в формате [x, y, timestamp]
+                movements = [
+                    {"x": pos[0], "y": pos[1], "timestamp": pos[2], "event_type": "move"}
+                    for pos in data['tracking_data']
+                ]
+                print(f"Найдено {len(movements)} движений мыши в формате tracking_data")
+            elif 'movements' in data and isinstance(data['movements'], list):
+                # Данные уже в нужном формате
+                movements = data['movements']
+                print(f"Найдено {len(movements)} движений мыши в формате movements")
+            
+            # Обновляем данные
+            data['movements'] = movements
+            data['clicks'] = data.get('clicks', [])
+            
+            print("Movements:", len(data.get('movements', [])))
+            print("Clicks:", len(data.get('clicks', [])))
+            print("Sample movement:", data.get('movements', [])[:1])
+            print("Sample click:", data.get('clicks', [])[:1])
+            
+            user_data = data.get('user', self.config.get('user', {}))
+            
+            # Добавляем длительность сессии и обновляем данные
+            data['session_duration'] = self._calculate_session_duration()
+            
+            # Сначала сохраняем локально
+            if not self.save_locally(data, user_data):
+                print("Ошибка при локальном сохранении данных")
+                return False
+            
+            # Проверяем, включена ли отправка данных на сервер
+            if not self.config.get('send_data', True):
+                print("Отправка данных на сервер отключена в настройках")
+                return True  # Возвращаем True, так как локальное сохранение произошло успешно
+                
+            # Отправляем на сервер, если отправка данных включена
+            return self.api_client.send_heatmap_data(data, user_data)
+        
+        except Exception as e:
+            print(f"Ошибка при загрузке данных: {e}")
+            return False
 
     def start_auto_sync(self) -> None:
         """Запустить автоматическую синхронизацию."""
