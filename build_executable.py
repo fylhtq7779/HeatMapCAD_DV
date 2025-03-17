@@ -74,6 +74,29 @@ def clean_build_directories():
                 shutil.rmtree(directory)
             except Exception as e:
                 print(f"Ошибка при очистке {directory}: {e}")
+    
+    # Также удаляем автоматически созданный .spec файл для одиночного файла
+    spec_file = 'HeatMapCAD_Single.spec'
+    if os.path.exists(spec_file):
+        print(f"Удаление файла спецификации: {spec_file}")
+        try:
+            os.remove(spec_file)
+        except Exception as e:
+            print(f"Ошибка при удалении {spec_file}: {e}")
+    
+    # Очищаем кэш PyInstaller
+    cache_dir = os.path.expanduser(os.path.join('~', '.pyinstaller'))
+    if os.path.exists(cache_dir):
+        print(f"Очистка кэша PyInstaller: {cache_dir}")
+        try:
+            for item in os.listdir(cache_dir):
+                item_path = os.path.join(cache_dir, item)
+                if os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+                else:
+                    os.remove(item_path)
+        except Exception as e:
+            print(f"Ошибка при очистке кэша: {e}")
 
 def find_python_dll_path():
     """Находит путь к python DLL в системе."""
@@ -131,6 +154,16 @@ def create_single_file_executable():
     """Создает одиночный исполняемый файл, который включает в себя все зависимости."""
     print("Создание единого исполняемого файла...")
     
+    # Удаляем существующий файл, если он есть
+    output_file = os.path.join('dist', 'HeatMapCAD_Single.exe')
+    if os.path.exists(output_file):
+        print(f"Удаление существующего файла: {output_file}")
+        try:
+            os.remove(output_file)
+        except Exception as e:
+            print(f"Ошибка при удалении {output_file}: {e}")
+            print("Продолжаем сборку...")
+    
     # Находим путь к Python DLL
     python_dll_path = find_python_dll_path()
     bin_option = []
@@ -183,8 +216,15 @@ def create_single_file_executable():
     # Запускаем процесс сборки
     try:
         subprocess.run(pyinstaller_cmd, check=True)
-        print("Создание одиночного файла завершено успешно!")
-        return True
+        
+        # Проверяем, что файл был создан
+        if os.path.exists(output_file):
+            print(f"Одиночный файл успешно создан: {output_file}")
+            print(f"Размер файла: {os.path.getsize(output_file) / (1024*1024):.2f} МБ")
+            return True
+        else:
+            print(f"Ошибка: файл {output_file} не был создан!")
+            return False
     except subprocess.CalledProcessError as e:
         print(f"Ошибка при создании одиночного файла: {e}")
         return False
