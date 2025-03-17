@@ -451,6 +451,15 @@ class MainWindow:
             bootstyle="info-round-toggle"
         )
         send_data_check.pack(anchor=tk.W, pady=5)
+        
+        # Добавляем кнопку настроек пользователя
+        config_button = ttkb.Button(
+            user_frame,
+            text="Изменить настройки пользователя",
+            command=self._open_user_config,
+            bootstyle="info-outline"
+        )
+        config_button.pack(anchor=tk.W, pady=5, fill=tk.X)
 
     def _on_send_data_changed(self) -> None:
         """Обработчик изменения настройки отправки данных."""
@@ -490,6 +499,44 @@ class MainWindow:
             # Используем debounce для предотвращения слишком частых обновлений
             if self._update_timer is not None:
                 self.root.after_cancel(self._update_timer)
-            
+                
             # Планируем обновление через небольшую задержку
-            self._update_timer = self.root.after(100, self.update_visualization) 
+            self._update_timer = self.root.after(100, self.update_visualization)
+            
+    def _open_user_config(self) -> None:
+        """Открывает диалог настроек пользователя."""
+        from ui.first_launch_dialog import FirstLaunchDialog
+        
+        try:
+            # Путь к конфигурационному файлу пользователя
+            user_config_path = "config/user_config.json"
+            
+            # Создаем и показываем диалог настроек
+            dialog = FirstLaunchDialog(self.root, user_config_path)
+            new_user_data = dialog.show()
+            
+            # Если пользователь подтвердил изменения
+            if new_user_data:
+                # Обновляем данные пользователя
+                self.user_data = new_user_data
+                
+                # Обновляем панель с информацией о пользователе
+                # Сначала удаляем старую панель
+                for widget in self.settings_frame.winfo_children():
+                    if widget.winfo_class() == 'TLabelframe' and widget.cget('text') == "Информация о пользователе":
+                        widget.destroy()
+                
+                # Создаем новую панель
+                self.create_user_info_panel()
+                
+                # Показываем сообщение об успешном обновлении
+                ttkb.messagebox.showinfo(
+                    "Успешно",
+                    "Настройки пользователя обновлены!"
+                )
+        except Exception as e:
+            # В случае ошибки показываем сообщение
+            ttkb.messagebox.showerror(
+                "Ошибка",
+                f"Не удалось обновить настройки пользователя: {str(e)}"
+            ) 

@@ -90,7 +90,8 @@ class Application:
                     },
                     "is_first_launch": True,
                     "available_programs": [
-                        "Компас 3D"
+                        "Компас 3D",
+                        "Механика PRO"
                     ]
                 }
                 os.makedirs(os.path.dirname(self.user_config_path), exist_ok=True)

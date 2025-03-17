@@ -4,8 +4,9 @@
         "group": "232",
         "selected_program": "Компас 3D"
     },
-    "is_first_launch": true,
+    "is_first_launch": false,
     "available_programs": [
-        "Компас 3D"
+        "Компас 3D",
+        "Механика PRO"
     ]
 }
