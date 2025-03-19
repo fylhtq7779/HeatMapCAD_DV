@@ -20,32 +20,33 @@
 
 - Python 3.8 или выше
 - Доступ в интернет для первоначальной установки зависимостей
+- Для Linux: установленный пакет gnome-screenshot (`sudo apt install gnome-screenshot`)
 
 ## Установка и запуск
 
-### Для обычных пользователей (рекомендуется)
+### Для Windows
 
-1. Скачайте архив `HeatMapCAD_Portable_20250226.zip` из раздела [Releases](https://github.com/fylhtq7779/HeatMapCAD_DV/releases/tag/v1.0.0)
-2. Распакуйте архив в любую директорию
-3. Запустите:
-   - В Windows: запустите `launch_heatmap.py` с помощью Python
-   - В Linux/macOS: запустите `start_heatmap.sh` (возможно, потребуется сделать файл исполняемым: `chmod +x start_heatmap.sh`)
-4. При первом запуске будут автоматически установлены все необходимые зависимости
-
-### Для разработчиков
-
-1. Клонируйте репозиторий:
+1. Установите Python 3.8 или выше с [официального сайта](https://www.python.org/downloads/)
+2. Клонируйте репозиторий:
 ```bash
 git clone https://github.com/fylhtq7779/HeatMapCAD_DV.git
 cd HeatMapCAD_DV
 ```
+3. Запустите `launch_heatmap.py` с помощью Python
 
-2. Запустите приложение:
+### Для Linux
+
+1. Установите необходимые пакеты:
 ```bash
-# Windows
-python launch_heatmap.py
-
-# Linux/macOS
+sudo apt install python3 python3-pip python3-venv gnome-screenshot
+```
+2. Клонируйте репозиторий:
+```bash
+git clone https://github.com/fylhtq7779/HeatMapCAD_DV.git
+cd HeatMapCAD_DV
+```
+3. Сделайте скрипт запуска исполняемым и запустите его:
+```bash
 chmod +x start_heatmap.sh
 ./start_heatmap.sh
 ```
@@ -59,15 +60,15 @@ chmod +x start_heatmap.sh
 5. Настройте параметры визуализации по желанию
 6. Сохраните тепловую карту в файл или отправьте на сервер
 
-## Создание портативной версии
+## Сборка исполняемого файла
 
-Для создания портативного архива с приложением:
+Для создания исполняемого файла используется PyInstaller. Запустите:
 
 ```bash
-python create_portable_archive.py
+python build_executable.py
 ```
 
-После выполнения этой команды в корневой директории появится файл `HeatMapCAD_Portable_YYYYMMDD.zip`, который можно распространять.
+После выполнения этой команды в директории `dist` появится исполняемый файл.
 
 ## Возможные проблемы и их решение
 
@@ -124,8 +125,8 @@ HeatMapCAD_DV/
 ├── mouse_tracks/       # Директория для хранения треков мыши
 │
 ├── launch_heatmap.py   # Скрипт для запуска приложения
-├── start_heatmap.sh    # Скрипт для запуска в Linux/macOS
-├── create_portable_archive.py # Скрипт для создания портативного архива
+├── start_heatmap.sh    # Скрипт для запуска в Linux
+├── build_executable.py # Скрипт для создания исполняемого файла
 │
 ├── requirements.txt    # Зависимости проекта
 ├── LICENSE.txt         # Лицензия
